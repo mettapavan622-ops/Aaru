@@ -1,0 +1,792 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Product, 
+  ProductVariant, 
+  CartItem, 
+  Order, 
+  User, 
+  AnnouncementSettings, 
+  Category, 
+  Collection,
+  CustomInquiry
+} from './types';
+import { 
+  initialProducts, 
+  categories as defaultCategories, 
+  collections as defaultCollections, 
+  defaultAnnouncement, 
+  sampleOrders 
+} from './data/mockData';
+
+// Component imports
+import { Header } from './components/Header';
+import { HeroBanner } from './components/HeroBanner';
+import { ProductListingPage } from './components/ProductListingPage';
+import { ProductDetailPage } from './components/ProductDetailPage';
+import { SixthElementSection } from './components/SixthElementSection';
+import { FounderStorySection } from './components/FounderStorySection';
+import { ShopTheLook } from './components/ShopTheLook';
+import { ShopTheLookPage } from './components/ShopTheLookPage';
+import { CustomClothingStudio } from './components/CustomClothingStudio';
+import { 
+  AboutAaruSection, 
+  BrandStorySection, 
+  FaqSection, 
+  ContactSection, 
+  Footer 
+} from './components/BrandStoryPages';
+import { CartDrawer } from './components/CartDrawer';
+import { CheckoutModal } from './components/CheckoutModal';
+import { OrderHistoryModal } from './components/OrderHistoryModal';
+import { WishlistDrawer } from './components/WishlistDrawer';
+import { AuthModal } from './components/AuthModal';
+import { AuthScreen } from './components/AuthScreen';
+import { WhatsAppButton } from './components/WhatsAppButton';
+import { AdminDashboard } from './components/admin/AdminDashboard';
+
+export default function App() {
+  // Top Level Navigation & Presentation Role Switcher
+  const [currentDashboard, setCurrentDashboard] = useState<'user' | 'admin'>('user');
+  const [activeUserView, setActiveUserView] = useState<'home' | 'catalog' | 'pdp' | 'custom' | 'story' | 'about' | 'contact' | 'shop-the-look'>('home');
+  const [catalogCategory, setCatalogCategory] = useState<string>('all');
+  const [catalogFilter, setCatalogFilter] = useState<'all' | 'ready-to-ship' | 'handloom' | 'bridal'>('all');
+
+  // Core Commerce State
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [orders, setOrders] = useState<Order[]>(sampleOrders);
+  const [announcement, setAnnouncement] = useState<AnnouncementSettings>(defaultAnnouncement);
+  const [categories, setCategories] = useState<Category[]>(defaultCategories);
+  const [collections, setCollections] = useState<Collection[]>(defaultCollections);
+
+  // Authentication State: Displayed before the user logs into the website
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem('aaru_user_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isGuestBrowsing, setIsGuestBrowsing] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  // Bag, Checkout, Wishlist, Tracking Drawers/Modals
+  const [cartItems, setCartItems] = useState<CartItem[]>([
+    {
+      product: initialProducts[0],
+      variant: initialProducts[0].variants[0],
+      quantity: 1
+    }
+  ]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [isOrdersOpen, setIsOrdersOpen] = useState(false);
+  const [wishlistProductIds, setWishlistProductIds] = useState<string[]>(() => {
+    return initialProducts[1]?.id ? [initialProducts[1].id] : [];
+  });
+
+  // Active Product for PDP
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(initialProducts[0]);
+
+  // Promo Code State
+  const [appliedPromo, setAppliedPromo] = useState('');
+  const [promoDiscount, setPromoDiscount] = useState(0);
+
+  // Synchronize with backend API on mount
+  useEffect(() => {
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setProducts(data);
+        }
+      })
+      .catch(err => console.error('Failed to load products from API:', err));
+
+    fetch('/api/cms/announcement')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.text) {
+          setAnnouncement(data);
+        }
+      })
+      .catch(err => console.error('Failed to load announcement from API:', err));
+
+    fetch('/api/orders')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setOrders(data);
+        }
+      })
+      .catch(err => console.error('Failed to load orders from API:', err));
+  }, []);
+
+  // Cart Operations
+  const handleAddToCart = (product: Product, variant: ProductVariant, quantity: number) => {
+    setCartItems(prev => {
+      const existingIndex = prev.findIndex(
+        i => i.product.id === product.id && i.variant.id === variant.id
+      );
+      if (existingIndex > -1) {
+        const updated = [...prev];
+        updated[existingIndex].quantity += quantity;
+        return updated;
+      }
+      return [...prev, { product, variant, quantity }];
+    });
+    setIsCartOpen(true);
+  };
+
+  const handleUpdateCartQuantity = (productId: string, variantId: string, quantity: number) => {
+    if (quantity <= 0) {
+      handleRemoveCartItem(productId, variantId);
+      return;
+    }
+    setCartItems(prev =>
+      prev.map(item =>
+        item.product.id === productId && item.variant.id === variantId
+          ? { ...item, quantity }
+          : item
+      )
+    );
+  };
+
+  const handleRemoveCartItem = (productId: string, variantId: string) => {
+    setCartItems(prev =>
+      prev.filter(item => !(item.product.id === productId && item.variant.id === variantId))
+    );
+  };
+
+  // Promo Code Validation
+  const handleApplyPromo = (code: string): boolean => {
+    const upper = code.trim().toUpperCase();
+    const subtotal = cartItems.reduce((s, i) => s + (i.product.salePrice || i.product.price) * i.quantity, 0);
+
+    if (upper === 'AARU10') {
+      setAppliedPromo('AARU10');
+      setPromoDiscount(Math.round(subtotal * 0.1));
+      return true;
+    } else if (upper === 'FESTIVE20' || upper === 'SIXTHELEMENT') {
+      setAppliedPromo(upper);
+      setPromoDiscount(Math.round(subtotal * 0.2));
+      return true;
+    }
+    return false;
+  };
+
+  // Wishlist Operations
+  const handleToggleWishlist = (product: Product) => {
+    setWishlistProductIds(prev =>
+      prev.includes(product.id)
+        ? prev.filter(id => id !== product.id)
+        : [...prev, product.id]
+    );
+  };
+
+  const handleMoveWishlistToCart = (product: Product) => {
+    handleAddToCart(product, product.variants[0], 1);
+    handleToggleWishlist(product);
+  };
+
+  // Checkout and Order Lifecycle
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + (item.product.salePrice || item.product.price) * item.quantity,
+    0
+  );
+  const shippingFee = subtotal >= 15000 || cartItems.length === 0 ? 0 : 500;
+  const tax = Math.round((subtotal - promoDiscount) * 0.05);
+  const total = Math.max(0, subtotal - promoDiscount + shippingFee + tax);
+
+  const handleOrderSuccess = (newOrder: Order) => {
+    setOrders(prev => [newOrder, ...prev]);
+    setCartItems([]);
+    setAppliedPromo('');
+    setPromoDiscount(0);
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/cancel`, { method: 'POST' });
+      const updated = await res.json();
+      setOrders(prev => prev.map(o => o.id === orderId ? updated : o));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRequestReturn = async (orderId: string) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/return`, { method: 'POST' });
+      const updated = await res.json();
+      setOrders(prev => prev.map(o => o.id === orderId ? updated : o));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRequestReturnWithDetails = async (
+    orderId: string,
+    details: {
+      requestType: 'Return' | 'Exchange';
+      reason: string;
+      clientNote: string;
+      exchangeSize?: string;
+    }
+  ) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}/return-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(details)
+      });
+      const data = await res.json();
+      if (data.order) {
+        setOrders(prev => prev.map(o => o.id === orderId ? data.order : o));
+      }
+    } catch (err) {
+      console.error('Error submitting return request:', err);
+      throw err;
+    }
+  };
+
+  // Admin Actions
+  const handleAdminSaveProduct = async (productData: Partial<Product>) => {
+    if (productData.id) {
+      // Update existing
+      const res = await fetch(`/api/products/${productData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData)
+      });
+      const updated = await res.json();
+      setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
+      if (selectedProduct?.id === updated.id) {
+        setSelectedProduct(updated);
+      }
+    } else {
+      // Create new
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData)
+      });
+      const created = await res.json();
+      setProducts(prev => [created, ...prev]);
+    }
+  };
+
+  const handleAdminDeleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to remove this piece from the atelier catalog?')) return;
+    await fetch(`/api/products/${productId}`, { method: 'DELETE' });
+    setProducts(prev => prev.filter(p => p.id !== productId));
+  };
+
+  const handleAdminUpdateAnnouncement = async (newSettings: Partial<AnnouncementSettings>) => {
+    const res = await fetch('/api/cms/announcement', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newSettings)
+    });
+    const updated = await res.json();
+    setAnnouncement(updated);
+  };
+
+  const handleAdminUpdateOrderStatus = async (
+    orderId: string, 
+    status: Order['status'], 
+    trackingNumber?: string
+  ) => {
+    const res = await fetch(`/api/orders/${orderId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, trackingNumber })
+    });
+    const updated = await res.json();
+    setOrders(prev => prev.map(o => o.id === orderId ? updated : o));
+  };
+
+  const handleRefreshOrders = async () => {
+    try {
+      const res = await fetch('/api/orders');
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setOrders(data);
+      }
+    } catch (err) {
+      console.error('Failed to sync orders:', err);
+    }
+  };
+
+  const handleCustomInquirySubmit = async (inquiry: CustomInquiry) => {
+    try {
+      await fetch('/api/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inquiry)
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Nav actions
+  const navigateToProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setActiveUserView('pdp');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const wishlistProducts = (products || []).filter(p => p && (wishlistProductIds || []).includes(p.id));
+
+  // =========================================================================
+  // IF IN ADMIN DASHBOARD MODE:
+  // =========================================================================
+  if (currentDashboard === 'admin') {
+    return (
+      <AdminDashboard
+        products={products}
+        orders={orders}
+        announcement={announcement}
+        categories={categories}
+        collections={collections}
+        onSaveProduct={handleAdminSaveProduct}
+        onDeleteProduct={handleAdminDeleteProduct}
+        onUpdateAnnouncement={handleAdminUpdateAnnouncement}
+        onUpdateOrderStatus={handleAdminUpdateOrderStatus}
+        onSwitchToUser={() => setCurrentDashboard('user')}
+        onRefreshOrders={handleRefreshOrders}
+      />
+    );
+  }
+
+  // =========================================================================
+  // AUTHENTICATION GATE:
+  // Displayed before the user logs into the website
+  // =========================================================================
+  if (!currentUser && !isGuestBrowsing) {
+    return (
+      <AuthScreen
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          setActiveUserView('home');
+          if (user.role === 'admin') {
+            setCurrentDashboard('admin');
+          }
+        }}
+        onContinueAsGuest={() => {
+          setIsGuestBrowsing(true);
+        }}
+      />
+    );
+  }
+
+  // =========================================================================
+  // USER STOREFRONT MODE:
+  // =========================================================================
+  return (
+    <div className="min-h-screen bg-[#FAF9F5] text-[#24211E] flex flex-col selection:bg-[#0F4C5C]/20 selection:text-[#0F4C5C]">
+      {/* Header with Live Announcement Bar & Role Switcher */}
+      <Header
+        announcement={announcement}
+        currentRole={currentDashboard}
+        currentMode={currentDashboard}
+        onRoleSwitch={setCurrentDashboard}
+        onToggleMode={setCurrentDashboard}
+        cartCount={cartItems.reduce((s, i) => s + i.quantity, 0)}
+        wishlistCount={(wishlistProductIds || []).length}
+        currentUser={currentUser}
+        products={products}
+        categories={categories}
+        onSearchSelect={navigateToProduct}
+        onOpenCart={() => setIsCartOpen(true)}
+        onOpenWishlist={() => setIsWishlistOpen(true)}
+        onOpenOrders={() => setIsOrdersOpen(true)}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onSignOut={() => {
+          localStorage.removeItem('aaru_user_session');
+          localStorage.removeItem('aaru_auth_token');
+          setCurrentUser(null);
+          setIsGuestBrowsing(false);
+        }}
+        onSelectCategory={(categoryName) => {
+          if (categoryName === 'Customized Clothing') {
+            setActiveUserView('custom');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else {
+            setCatalogCategory(categoryName);
+            setCatalogFilter('all');
+            setActiveUserView('catalog');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
+        onNavigate={(view) => {
+          if (view === 'shop-the-look') {
+            setActiveUserView('shop-the-look');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (view === 'sarees-rts') {
+            setCatalogCategory('Sarees');
+            setCatalogFilter('ready-to-ship');
+            setActiveUserView('catalog');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (view === 'ready-to-ship') {
+            setCatalogCategory('all');
+            setCatalogFilter('ready-to-ship');
+            setActiveUserView('catalog');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (view === 'designer-wear') {
+            setCatalogCategory('Designer Wear');
+            setCatalogFilter('all');
+            setActiveUserView('catalog');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (view === 'just-in') {
+            setCatalogCategory('all');
+            setCatalogFilter('all');
+            setActiveUserView('catalog');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (view === 'sale') {
+            setCatalogCategory('all');
+            setCatalogFilter('sale' as any);
+            setActiveUserView('catalog');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (view === 'custom-clothing' || view === 'custom') {
+            setActiveUserView('custom');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (view === 'story' || view === 'sixth-element' || view === 'the-sixth-element') {
+            setActiveUserView('story');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (view === 'about') {
+            setActiveUserView('about');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (view === 'categories' || view === 'collections') {
+            const el = document.getElementById('shop-by-category');
+            if (el && activeUserView === 'home') {
+              el.scrollIntoView({ behavior: 'smooth' });
+            } else {
+              setCatalogCategory('all');
+              setCatalogFilter('all');
+              setActiveUserView('catalog');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          } else if (view === 'home') {
+            setActiveUserView('home');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else {
+            setActiveUserView(view as any);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
+        activeView={activeUserView}
+        activeTab={activeUserView}
+        setActiveTab={(view) => {
+          if (view === 'custom-clothing' || view === 'custom') {
+            setActiveUserView('custom');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (view === 'story' || view === 'sixth-element' || view === 'the-sixth-element') {
+            setActiveUserView('story');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (view === 'about') {
+            setActiveUserView('about');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else if (view === 'categories' || view === 'just-in' || view === 'designer-wear' || view === 'ready-to-ship' || view === 'sale') {
+            const el = document.getElementById('shop-by-category');
+            el?.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            setActiveUserView(view as any);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
+      />
+
+      {/* Main Content Area */}
+      <main className="flex-1">
+        {activeUserView === 'pdp' && selectedProduct ? (
+          /* Product Detail Page View */
+          <ProductDetailPage
+            product={selectedProduct}
+            onAddToCart={handleAddToCart}
+            isWishlisted={Boolean(selectedProduct && (wishlistProductIds || []).includes(selectedProduct.id))}
+            onToggleWishlist={handleToggleWishlist}
+            onBack={() => {
+              setActiveUserView('home');
+              window.scrollTo({ top: 400, behavior: 'smooth' });
+            }}
+            onSelectRelated={navigateToProduct}
+            relatedProducts={products.filter(p => p.id !== selectedProduct.id)}
+          />
+        ) : activeUserView === 'shop-the-look' ? (
+          /* Dedicated Shop the Look Editorial Lookbook */
+          <ShopTheLookPage
+            products={products}
+            onSelectProduct={navigateToProduct}
+            onBackToHome={() => {
+              setActiveUserView('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onQuickAddToCart={(prod) => handleAddToCart(prod, prod.variants[0], 1)}
+          />
+        ) : activeUserView === 'catalog' ? (
+          /* Filtered Catalog Page */
+          <div className="py-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-4 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveUserView('home');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="text-xs font-semibold uppercase tracking-wider text-[#0F4C5C] hover:underline flex items-center gap-1.5 cursor-pointer"
+              >
+                ← Back to Home Showcase
+              </button>
+              <span className="text-xs text-[#736B5E] font-medium">
+                Browsing: <strong className="text-[#24211E]">{catalogCategory !== 'all' ? catalogCategory : 'All Categories'}</strong>
+                {catalogFilter === 'ready-to-ship' && ' • Ready to Ship'}
+              </span>
+            </div>
+            <ProductListingPage
+              products={products}
+              categories={categories}
+              collections={collections}
+              wishlistIds={wishlistProductIds}
+              wishlistProductIds={wishlistProductIds}
+              onSelectProduct={navigateToProduct}
+              onToggleWishlist={handleToggleWishlist}
+              onQuickAddToCart={(prod) => handleAddToCart(prod, prod.variants[0], 1)}
+              initialCategory={catalogCategory}
+              initialFilter={catalogFilter as any}
+            />
+          </div>
+        ) : activeUserView === 'custom' ? (
+          /* Bespoke Atelier Inquiries */
+          <div className="py-8">
+            <CustomClothingStudio onSubmitInquiry={handleCustomInquirySubmit} />
+          </div>
+        ) : activeUserView === 'story' ? (
+          /* Full Editorial Storytelling View - Brand Manifesto */
+          <div className="py-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-4 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveUserView('home');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="text-xs font-semibold uppercase tracking-wider text-[#0F4C5C] hover:underline flex items-center gap-1.5 cursor-pointer"
+              >
+                ← Back to Home Showcase
+              </button>
+              <span className="text-xs text-[#8C6D37] font-semibold tracking-widest uppercase">
+                Brand Manifesto • The Sixth Element Story
+              </span>
+            </div>
+            <div className="space-y-16">
+              <SixthElementSection onExploreCollection={() => {
+                setCatalogCategory('all');
+                setCatalogFilter('all');
+                setActiveUserView('catalog');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }} />
+              <FounderStorySection onDiscoverStory={() => {
+                setActiveUserView('about');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }} />
+              <BrandStorySection />
+            </div>
+          </div>
+        ) : activeUserView === 'about' ? (
+          /* Brand Heritage & About AARU */
+          <div className="py-8 space-y-12">
+            <AboutAaruSection />
+            <FounderStorySection onDiscoverStory={() => {
+              setActiveUserView('story');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }} />
+            <FaqSection />
+          </div>
+        ) : activeUserView === 'contact' ? (
+          /* Concierge & Atelier Consultations */
+          <div className="py-8 space-y-12">
+            <ContactSection />
+            <FaqSection />
+          </div>
+        ) : (
+          /* Complete Editorial Home & Storytelling-first Commerce Flow:
+             1. Hero Banner
+             2. Shop by Category (Product Listing with filters & instant search)
+             3. The Sixth Element Narrative
+             4. Founder Story & Artisanal Lineage
+             5. Shop The Look
+             6. Customised Clothing Studio
+             7. About AARU & FAQ
+          */
+          <div className="space-y-20 lg:space-y-28">
+            {/* 1. Hero Banner */}
+            <HeroBanner
+              onExplore={() => {
+                const el = document.getElementById('shop-by-category');
+                el?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              onExploreClick={() => {
+                setCatalogCategory('all');
+                setCatalogFilter('all');
+                setActiveUserView('catalog');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onShopNewArrivals={() => {
+                setCatalogCategory('all');
+                setCatalogFilter('all');
+                setActiveUserView('catalog');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onStoryClick={() => {
+                setActiveUserView('story');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onSixthElementStory={() => {
+                setActiveUserView('story');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onCustomStudio={() => {
+                setActiveUserView('custom');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onShopLookClick={() => {
+                setActiveUserView('shop-the-look');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              onSareesRTSClick={() => {
+                setCatalogCategory('Sarees');
+                setCatalogFilter('ready-to-ship');
+                setActiveUserView('catalog');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+
+            {/* 2. Shop by Category & Product Catalog Section */}
+            <div id="shop-by-category">
+              <ProductListingPage
+                products={products}
+                categories={categories}
+                collections={collections}
+                wishlistIds={wishlistProductIds}
+                wishlistProductIds={wishlistProductIds}
+                onSelectProduct={navigateToProduct}
+                onToggleWishlist={handleToggleWishlist}
+                onQuickAddToCart={(prod) => handleAddToCart(prod, prod.variants[0], 1)}
+              />
+            </div>
+
+            {/* 3. The Sixth Element Philosophy Section */}
+            <SixthElementSection onExploreCollection={() => {
+              setActiveUserView('story');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }} />
+
+            {/* 4. Founder Story & Craft Lineage */}
+            <FounderStorySection onDiscoverStory={() => {
+              setActiveUserView('about');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }} />
+
+            {/* 5. Shop The Look Editorial Hotspots */}
+            <ShopTheLook
+              onSelectLookProduct={navigateToProduct}
+              products={products}
+              onExploreAllLooks={() => {
+                setActiveUserView('shop-the-look');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+
+            {/* 6. Customised Clothing Studio */}
+            <CustomClothingStudio onSubmitInquiry={handleCustomInquirySubmit} />
+
+            {/* 7. About AARU & Brand Essence */}
+            <AboutAaruSection />
+
+            {/* 8. Frequently Asked Questions */}
+            <FaqSection />
+
+            {/* 9. Atelier Concierge Contact */}
+            <ContactSection />
+          </div>
+        )}
+      </main>
+
+      {/* Luxury Brand Footer */}
+      <Footer onNavigate={(v) => {
+        setActiveUserView(v);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }} />
+
+      {/* Floating WhatsApp Concierge */}
+      <WhatsAppButton />
+
+      {/* Slide-out Shopping Bag Drawer */}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        items={cartItems}
+        onUpdateQuantity={handleUpdateCartQuantity}
+        onRemoveItem={handleRemoveCartItem}
+        onProceedToCheckout={() => {
+          setIsCartOpen(false);
+          setIsCheckoutOpen(true);
+        }}
+        appliedPromo={appliedPromo}
+        onApplyPromo={handleApplyPromo}
+        promoDiscount={promoDiscount}
+      />
+
+      {/* Bespoke Multi-Step Checkout Modal */}
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        items={cartItems}
+        subtotal={subtotal}
+        discount={promoDiscount}
+        shippingFee={shippingFee}
+        tax={tax}
+        total={total}
+        onOrderSuccess={handleOrderSuccess}
+        userEmail={currentUser?.email}
+        userName={currentUser?.name}
+      />
+
+      {/* Live Order History & Tracking Modal */}
+      <OrderHistoryModal
+        isOpen={isOrdersOpen}
+        onClose={() => setIsOrdersOpen(false)}
+        orders={orders}
+        onCancelOrder={handleCancelOrder}
+        onRequestReturn={handleRequestReturn}
+        onRequestReturnWithDetails={handleRequestReturnWithDetails}
+        onRefreshOrders={handleRefreshOrders}
+      />
+
+      {/* Saved Heirloom Wishlist Drawer */}
+      <WishlistDrawer
+        isOpen={isWishlistOpen}
+        onClose={() => setIsWishlistOpen(false)}
+        wishlistProducts={wishlistProducts}
+        onRemoveWishlist={handleToggleWishlist}
+        onMoveToCart={handleMoveWishlistToCart}
+        onSelectProduct={navigateToProduct}
+      />
+
+      {/* Email / OTP Login Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          if (user.role === 'admin') {
+            setCurrentDashboard('admin');
+          }
+        }}
+      />
+    </div>
+  );
+}
