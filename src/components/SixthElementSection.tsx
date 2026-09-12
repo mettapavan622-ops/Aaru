@@ -127,7 +127,7 @@ export const SixthElementSection: React.FC<{ onExploreCollection?: () => void }>
             <button
               type="button"
               onClick={onExploreCollection}
-              className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-200 shadow-md cursor-pointer"
+              className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#0F4C5C] hover:bg-[#E8B4B8] hover:text-black border border-transparent hover:border-[#E8B4B8] text-white text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-200 shadow-md cursor-pointer"
             >
               Shop The Sixth Element Edition
             </button>

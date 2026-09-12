@@ -76,9 +76,9 @@ export const ShopTheLook: React.FC<ShopTheLookProps> = ({
                 <button
                   type="button"
                   onClick={() => onSelectProduct(linkedProduct)}
-                  className="px-5 py-2.5 bg-white text-[#0F4C5C] text-xs font-semibold uppercase tracking-wider flex items-center gap-2 hover:bg-[#FAF7F2] transition-colors shadow-md self-start sm:self-auto cursor-pointer"
+                  className="px-5 py-2.5 bg-white text-[#0F4C5C] text-xs font-semibold uppercase tracking-wider flex items-center gap-2 hover:bg-[#E8B4B8] hover:text-black transition-colors shadow-md self-start sm:self-auto cursor-pointer"
                 >
-                  <span>Shop This Ensemble ({currentLook.price})</span>
+                  <span>Shop This Look ({currentLook.price})</span>
                   <ArrowUpRight className="w-4 h-4" />
                 </button>
               )}
@@ -129,9 +129,9 @@ export const ShopTheLook: React.FC<ShopTheLookProps> = ({
                 id="explore-all-shop-the-look-btn"
                 type="button"
                 onClick={onExploreAllLooks}
-                className="w-full py-3 px-4 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-[0.16em] flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer mt-2"
+                className="w-full py-3 px-4 bg-[#0F4C5C] hover:bg-[#E8B4B8] hover:text-black border border-transparent hover:border-[#E8B4B8] text-white text-xs font-semibold uppercase tracking-[0.16em] flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer mt-2"
               >
-                <span>Explore Dedicated Lookbook Ensembles</span>
+                <span>Shop This Look – Full Lookbook</span>
                 <ArrowUpRight className="w-4 h-4" />
               </button>
             )}

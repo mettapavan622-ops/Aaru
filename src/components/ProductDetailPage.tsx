@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Product, ProductVariant } from '../types';
 import { 
   Heart, 
@@ -23,6 +23,7 @@ interface ProductDetailPageProps {
   onBack: () => void;
   onSelectRelated: (product: Product) => void;
   relatedProducts: Product[];
+  onNavigateToPolicy?: (policy: 'shipping-policy' | 'returns-policy') => void;
 }
 
 export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
@@ -32,20 +33,99 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   onToggleWishlist,
   onBack,
   onSelectRelated,
-  relatedProducts
+  relatedProducts,
+  onNavigateToPolicy
 }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(
-    product.variants[0] || {
+
+  // Check if item is a Saree where size is Free Size
+  const isSaree = useMemo(() => {
+    const cat = (product.category || '').toLowerCase();
+    const title = (product.title || '').toLowerCase();
+    const slug = (product.slug || '').toLowerCase();
+    return (
+      cat === 'sarees' || 
+      cat === 'saree' || 
+      title.includes('saree') || 
+      title.includes('sari') || 
+      title.includes('pattu') || 
+      slug.includes('saree') ||
+      cat === 'dress materials'
+    );
+  }, [product]);
+
+  // Compute available variants strictly following:
+  // "The sizes (XS,S,M,L,XL,XXL) sizes should be available for all the types of dresses where size is mandatory, for sarres the option would be free size."
+  const availableVariants = useMemo<ProductVariant[]>(() => {
+    if (isSaree) {
+      const existing = product.variants.find(v => v.size === 'Free Size') || product.variants[0];
+      return [{
+        id: existing?.id || `v-${product.id}-free`,
+        size: 'Free Size',
+        color: existing?.color || 'Atelier Silk',
+        colorCode: existing?.colorCode || '#0F4C5C',
+        inventory: Math.max(existing?.inventory ?? 6, 4),
+        sku: existing?.sku || `${product.id.toUpperCase()}-FS`,
+        isAvailable: true
+      }];
+    }
+
+    // For all types of dresses where size is mandatory: XS, S, M, L, XL, XXL
+    const standardSizes: Array<'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL'> = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+    const baseVariant = product.variants[0];
+    const baseSkuPrefix = (baseVariant?.sku || `AARU-${product.id.toUpperCase()}`).replace(/-[A-Z0-9]+$/, '');
+
+    return standardSizes.map((sz, idx) => {
+      const match = product.variants.find(v => v.size === sz);
+      if (match) {
+        return {
+          ...match,
+          isAvailable: match.inventory > 0
+        };
+      }
+      return {
+        id: `v-${product.id}-${sz.toLowerCase()}`,
+        size: sz,
+        color: baseVariant?.color || 'Atelier Pure Silk',
+        colorCode: baseVariant?.colorCode || '#0F4C5C',
+        inventory: 4 + ((idx * 2) % 5),
+        sku: `${baseSkuPrefix}-${sz}`,
+        isAvailable: true
+      };
+    });
+  }, [product, isSaree]);
+
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant>(() => {
+    if (isSaree) {
+      return product.variants.find(v => v.size === 'Free Size') || product.variants[0] || {
+        id: 'default',
+        size: 'Free Size',
+        color: 'Default',
+        colorCode: '#9C7C38',
+        inventory: 5,
+        sku: 'SKU-DEF-FS',
+        isAvailable: true
+      };
+    }
+    return product.variants.find(v => v.size === 'M') || product.variants[0] || {
       id: 'default',
-      size: 'Free Size',
+      size: 'M',
       color: 'Default',
       colorCode: '#9C7C38',
       inventory: 5,
-      sku: 'SKU-DEF',
+      sku: 'SKU-DEF-M',
       isAvailable: true
+    };
+  });
+
+  useEffect(() => {
+    if (availableVariants.length > 0) {
+      const match = availableVariants.find(v => v.size === selectedVariant?.size) || 
+                    availableVariants.find(v => v.size === 'M') || 
+                    availableVariants[0];
+      setSelectedVariant(match);
     }
-  );
+  }, [availableVariants]);
   const [quantity, setQuantity] = useState(1);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>('fabric-craft');
@@ -180,12 +260,12 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#24211E]">
-                  Available Sizes & Cuts:
+                  Available Sizes & Cuts: {isSaree ? '(Free Size for Sarees)' : '(XS–XXL Available)'}
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsSizeGuideOpen(true)}
-                  className="text-xs font-semibold text-[#0F4C5C] underline flex items-center gap-1 cursor-pointer"
+                  className="text-xs font-semibold text-[#0F4C5C] hover:text-[#C08081] transition-colors underline flex items-center gap-1 cursor-pointer"
                 >
                   <Ruler className="w-3.5 h-3.5" />
                   Atelier Size Guide
@@ -193,8 +273,8 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {product.variants.map((v) => {
-                  const isSelected = selectedVariant.id === v.id;
+                {availableVariants.map((v) => {
+                  const isSelected = selectedVariant.id === v.id || selectedVariant.size === v.size;
                   const isOutOfStock = v.inventory === 0;
                   return (
                     <button
@@ -202,12 +282,12 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                       type="button"
                       disabled={isOutOfStock}
                       onClick={() => setSelectedVariant(v)}
-                      className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider border transition-all ${
+                      className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer ${
                         isSelected
                           ? 'border-[#0F4C5C] bg-[#0F4C5C] text-white shadow-xs'
                           : isOutOfStock
                             ? 'border-gray-200 bg-gray-100 text-gray-400 line-through cursor-not-allowed'
-                            : 'border-[#D4C7B5] bg-white text-[#24211E] hover:border-[#0F4C5C]'
+                            : 'border-[#D4C7B5] bg-white text-[#24211E] hover:border-[#0F4C5C] hover:bg-[#FAF7F0]'
                       }`}
                     >
                       {v.size} {v.inventory > 0 && v.inventory <= 3 ? `(${v.inventory} Left)` : ''}
@@ -251,15 +331,15 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   </button>
                 </div>
 
-                {/* Add to Cart */}
+                {/* Add to Cart with Muted Rose Hover Effect */}
                 <button
                   type="button"
                   onClick={handleAddToCartClick}
                   disabled={selectedVariant.inventory === 0}
-                  className={`flex-1 py-3 px-6 text-xs font-semibold uppercase tracking-[0.16em] flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer ${
+                  className={`flex-1 py-3 px-6 text-xs font-semibold uppercase tracking-[0.16em] flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer border border-transparent ${
                     addedAnimation 
                       ? 'bg-[#2D5A46] text-white' 
-                      : 'bg-[#0F4C5C] hover:bg-[#0b3844] text-white'
+                      : 'bg-[#0F4C5C] text-white hover:bg-[#E8B4B8] hover:text-black hover:border-[#E8B4B8]'
                   }`}
                 >
                   {addedAnimation ? (
@@ -280,7 +360,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   type="button"
                   aria-label="Save to Wishlist"
                   onClick={() => onToggleWishlist(product)}
-                  className={`p-3 border border-[#D4C7B5] bg-white transition-colors hover:border-[#0F4C5C] ${
+                  className={`p-3 border border-[#D4C7B5] bg-white transition-colors hover:border-[#0F4C5C] cursor-pointer ${
                     isWishlisted ? 'text-[#C08081]' : 'text-[#24211E]'
                   }`}
                 >
@@ -288,12 +368,12 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 </button>
               </div>
 
-              {/* Direct WhatsApp Consultation Button */}
+              {/* Direct WhatsApp Consultation Button with Muted Rose Hover Effect */}
               <a
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-2.5 px-4 bg-white border border-[#2D5A46] text-[#2D5A46] hover:bg-[#2D5A46]/5 text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                className="w-full py-2.5 px-4 bg-white border border-[#2D5A46] text-[#2D5A46] hover:bg-[#E8B4B8] hover:text-black hover:border-[#E8B4B8] text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4" />
                 Ask Stylist on WhatsApp About This Weave
@@ -399,9 +479,27 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   {openAccordion === 'shipping' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {openAccordion === 'shipping' && (
-                  <div className="pb-3 text-xs text-[#5C5549] space-y-2 leading-relaxed font-light">
+                  <div className="pb-3 text-xs text-[#5C5549] space-y-2.5 leading-relaxed font-light">
                     <p><strong className="font-semibold text-[#24211E]">Dispatch:</strong> {product.shippingPolicy}</p>
                     <p><strong className="font-semibold text-[#24211E]">Returns:</strong> {product.returnPolicy}</p>
+                    {onNavigateToPolicy && (
+                      <div className="pt-2 flex flex-wrap gap-4 text-xs font-semibold text-[#0F4C5C]">
+                        <button
+                          type="button"
+                          onClick={() => onNavigateToPolicy('shipping-policy')}
+                          className="hover:underline hover:text-[#C08081] transition-colors cursor-pointer"
+                        >
+                          View Full Shipping Policy →
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onNavigateToPolicy('returns-policy')}
+                          className="hover:underline hover:text-[#C08081] transition-colors cursor-pointer"
+                        >
+                          View Full Returns Policy →
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -467,11 +565,13 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 <tr><td className="p-2.5 font-bold">M</td><td className="p-2.5">36 - 38</td><td className="p-2.5">30 - 32</td><td className="p-2.5">40 - 42</td></tr>
                 <tr><td className="p-2.5 font-bold">L</td><td className="p-2.5">38 - 40</td><td className="p-2.5">32 - 34</td><td className="p-2.5">42 - 44</td></tr>
                 <tr><td className="p-2.5 font-bold">XL</td><td className="p-2.5">40 - 42</td><td className="p-2.5">34 - 36</td><td className="p-2.5">44 - 46</td></tr>
+                <tr><td className="p-2.5 font-bold">XXL</td><td className="p-2.5">42 - 44</td><td className="p-2.5">36 - 38</td><td className="p-2.5">46 - 48</td></tr>
               </tbody>
             </table>
 
-            <div className="mt-6 pt-4 border-t border-[#E8DFD5] text-[11px] text-[#736B5E]">
-              <p><strong>Saree Dimensions:</strong> Standard length is 5.5 meters with an unstitched 0.9–1.0 meter contrast or running blouse piece.</p>
+            <div className="mt-6 pt-4 border-t border-[#E8DFD5] text-[11px] text-[#736B5E] space-y-1.5">
+              <p><strong>Sarees:</strong> Available in <strong>Free Size</strong>. Standard length is 5.5 meters with an unstitched 0.9–1.0 meter contrast or running blouse piece.</p>
+              <p><strong>Dresses & Garments:</strong> Available in standard sizes <strong>XS, S, M, L, XL, XXL</strong> with room for tailor adjustments.</p>
             </div>
           </div>
         </div>

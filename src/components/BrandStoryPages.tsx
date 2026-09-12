@@ -352,11 +352,11 @@ export const Footer: React.FC<{
               The Collections
             </h4>
             <ul className="space-y-2.5 text-xs text-[#C4B7A5] font-light">
-              <li><button type="button" onClick={() => handleNav('collections')} className="hover:text-white transition-colors cursor-pointer text-left">The Sixth Element Edition</button></li>
-              <li><button type="button" onClick={() => handleNav('collections')} className="hover:text-white transition-colors cursor-pointer text-left">AARU by Moni</button></li>
-              <li><button type="button" onClick={() => handleNav('sarees-rts')} className="hover:text-white transition-colors cursor-pointer text-left">Sarees – Ready to Ship</button></li>
-              <li><button type="button" onClick={() => handleNav('designer-wear')} className="hover:text-white transition-colors cursor-pointer text-left">Hand-Embroidered Organza</button></li>
-              <li><button type="button" onClick={() => handleNav('sale')} className="text-[#E0B0B1] hover:text-white transition-colors font-medium cursor-pointer text-left">Mid-Season Sale (Up to 25% Off)</button></li>
+              <li><button type="button" onClick={() => handleNav('collections')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">The Sixth Element Edition</button></li>
+              <li><button type="button" onClick={() => handleNav('collections')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">AARU by Moni</button></li>
+              <li><button type="button" onClick={() => handleNav('sarees-rts')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Sarees – Ready to Ship</button></li>
+              <li><button type="button" onClick={() => handleNav('designer-wear')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Hand-Embroidered Organza</button></li>
+              <li><button type="button" onClick={() => handleNav('sale')} className="text-[#E0B0B1] hover:text-[#E8B4B8] transition-colors font-medium cursor-pointer text-left">Mid-Season Sale (Up to 25% Off)</button></li>
             </ul>
           </div>
 
@@ -366,17 +366,17 @@ export const Footer: React.FC<{
               Atelier Services
             </h4>
             <ul className="space-y-2.5 text-xs text-[#C4B7A5] font-light">
-              <li><button type="button" onClick={() => handleNav('custom-clothing')} className="hover:text-white transition-colors cursor-pointer text-left">Customised Clothing Studio</button></li>
-              <li><button type="button" onClick={handleOpenOrders} className="hover:text-white transition-colors cursor-pointer text-left">Track Order Status</button></li>
-              <li><button type="button" onClick={() => handleNav('shop-the-look')} className="hover:text-white transition-colors cursor-pointer text-left">Shop the Lookbook</button></li>
-              <li><a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5 text-emerald-400" /> WhatsApp Atelier Stylist</a></li>
-              <li><button type="button" onClick={handleSwitchAdmin} className="text-[#D4C7B5] hover:text-white font-medium cursor-pointer text-left">Atelier Admin Console</button></li>
+              <li><button type="button" onClick={() => handleNav('custom-clothing')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Customised Clothing Studio</button></li>
+              <li><button type="button" onClick={handleOpenOrders} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Track Order Status</button></li>
+              <li><button type="button" onClick={() => handleNav('shop-the-look')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Shop the Lookbook</button></li>
+              <li><a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="hover:text-[#E8B4B8] transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5 text-emerald-400" /> WhatsApp Atelier Stylist</a></li>
+              <li><button type="button" onClick={handleSwitchAdmin} className="text-[#D4C7B5] hover:text-[#E8B4B8] font-medium cursor-pointer text-left">Atelier Admin Console</button></li>
             </ul>
           </div>
 
-          {/* Col 4: CUSTOMER CARE (Matching Screenshot 2026-09-12 103755.png) */}
+          {/* Col 4: CUSTOMER CARE (Heading white, values hover muted rose/pink) */}
           <div className="space-y-3">
-            <h4 className="font-serif text-sm font-bold tracking-[0.15em] text-[#C49E62] uppercase">
+            <h4 className="font-serif text-sm font-bold tracking-wider text-[#FAF7F2] uppercase">
               CUSTOMER CARE
             </h4>
             <ul className="space-y-3 text-sm text-[#C4B7A5] font-light">
@@ -385,7 +385,7 @@ export const Footer: React.FC<{
                   type="button"
                   id="footer-shipping-policy-btn"
                   onClick={() => handleNav('shipping-policy')}
-                  className="hover:text-white transition-colors cursor-pointer text-left block"
+                  className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left block"
                 >
                   Shipping Policy
                 </button>
@@ -395,7 +395,7 @@ export const Footer: React.FC<{
                   type="button"
                   id="footer-returns-policy-btn"
                   onClick={() => handleNav('returns-policy')}
-                  className="hover:text-white transition-colors cursor-pointer text-left block"
+                  className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left block"
                 >
                   Returns Policy
                 </button>
@@ -405,7 +405,7 @@ export const Footer: React.FC<{
                   type="button"
                   id="footer-privacy-policy-btn"
                   onClick={() => handleNav('privacy-policy')}
-                  className="hover:text-white transition-colors cursor-pointer text-left block"
+                  className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left block"
                 >
                   Privacy Policy
                 </button>
@@ -415,7 +415,7 @@ export const Footer: React.FC<{
                   type="button"
                   id="footer-terms-of-use-btn"
                   onClick={() => handleNav('terms-of-use')}
-                  className="hover:text-white transition-colors cursor-pointer text-left block"
+                  className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left block"
                 >
                   Terms of Use
                 </button>
@@ -426,7 +426,7 @@ export const Footer: React.FC<{
                   target="_blank"
                   rel="noopener noreferrer"
                   id="footer-whatsapp-support-btn"
-                  className="hover:text-white transition-colors flex items-center gap-2 cursor-pointer pt-0.5"
+                  className="hover:text-[#E8B4B8] transition-colors flex items-center gap-2 cursor-pointer pt-0.5"
                 >
                   <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span>WhatsApp Support</span>
@@ -441,12 +441,12 @@ export const Footer: React.FC<{
               Brand & Heritage
             </h4>
             <ul className="space-y-2.5 text-xs text-[#C4B7A5] font-light">
-              <li><button type="button" onClick={() => handleNav('about')} className="hover:text-white transition-colors cursor-pointer text-left">About AARU</button></li>
-              <li><button type="button" onClick={() => handleNav('story')} className="hover:text-white transition-colors cursor-pointer text-left">Founder’s Story: Moni</button></li>
-              <li><a href="#faqs" className="hover:text-white transition-colors cursor-pointer text-left block">Frequently Asked Questions</a></li>
-              <li><button type="button" onClick={() => handleNav('contact')} className="hover:text-white transition-colors cursor-pointer text-left">Salon & Atelier Contact</button></li>
+              <li><button type="button" onClick={() => handleNav('about')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">About AARU</button></li>
+              <li><button type="button" onClick={() => handleNav('story')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Founder’s Story: Moni</button></li>
+              <li><a href="#faqs" className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left block">Frequently Asked Questions</a></li>
+              <li><button type="button" onClick={() => handleNav('contact')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Salon & Atelier Contact</button></li>
               <li>
-                <button type="button" onClick={() => handleNav('privacy-policy')} className="text-[#8A7F73] hover:text-white transition-colors cursor-pointer text-left">
+                <button type="button" onClick={() => handleNav('privacy-policy')} className="text-[#8A7F73] hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">
                   Legal Compliance & GST
                 </button>
               </li>
@@ -462,7 +462,7 @@ export const Footer: React.FC<{
             <button
               type="button"
               onClick={handleSwitchAdmin}
-              className="text-[#FAF7F2] underline underline-offset-4 hover:text-[#D4C7B5] cursor-pointer"
+              className="text-[#FAF7F2] underline underline-offset-4 hover:text-[#E8B4B8] cursor-pointer transition-colors"
             >
               Switch to Admin Dashboard
             </button>

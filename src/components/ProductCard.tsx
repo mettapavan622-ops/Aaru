@@ -78,9 +78,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div className="absolute inset-x-3 bottom-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <button
             type="button"
-            className="w-full py-2.5 bg-[#FAF7F2]/95 backdrop-blur-md text-[#0F4C5C] text-xs font-semibold tracking-wider uppercase flex items-center justify-center gap-1.5 shadow-md hover:bg-[#0F4C5C] hover:text-white transition-colors duration-200 border border-[#0F4C5C]/20"
+            className="w-full py-2.5 bg-[#FAF7F2]/95 backdrop-blur-md text-[#0F4C5C] text-xs font-semibold tracking-wider uppercase flex items-center justify-center gap-1.5 shadow-md hover:bg-[#E8B4B8] hover:text-black transition-colors duration-200 border border-[#0F4C5C]/20 cursor-pointer"
           >
-            Explore Weave
+            Product Details
             <ArrowUpRight className="w-3.5 h-3.5" />
           </button>
         </div>

@@ -10,7 +10,8 @@ interface CartDrawerProps {
   onRemoveItem: (productId: string, variantId: string) => void;
   onProceedToCheckout: () => void;
   appliedPromo: string;
-  onApplyPromo: (code: string) => boolean;
+  onApplyPromo: (code: string) => Promise<{ success: boolean; message: string; discount?: number }> | { success: boolean; message: string; discount?: number } | boolean;
+  onRemovePromo?: () => void;
   promoDiscount: number;
 }
 
@@ -23,10 +24,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onProceedToCheckout,
   appliedPromo,
   onApplyPromo,
+  onRemovePromo,
   promoDiscount
 }) => {
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');
+  const [promoSuccess, setPromoSuccess] = useState('');
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
 
   if (!isOpen) return null;
 
@@ -39,18 +43,40 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const progressToFreeShipping = Math.min(100, (subtotal / freeShippingThreshold) * 100);
   const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
 
+  const safeDiscount = Math.min(subtotal, Math.max(0, Number(promoDiscount) || 0));
+  const remainingSubtotal = Math.max(0, subtotal - safeDiscount);
   const shippingFee = subtotal >= freeShippingThreshold || items.length === 0 ? 0 : 500;
-  const tax = Math.round((subtotal - promoDiscount) * 0.05); // 5% GST on luxury textiles
-  const total = Math.max(0, subtotal - promoDiscount + shippingFee + tax);
+  const tax = Math.round(remainingSubtotal * 0.05); // 5% GST on luxury textiles
+  const total = Math.max(0, remainingSubtotal + shippingFee + tax);
 
-  const handleApplyPromoCode = (e: React.FormEvent) => {
+  const handleApplyPromoCode = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!promoInput.trim()) return;
     setPromoError('');
-    const success = onApplyPromo(promoInput);
-    if (!success) {
-      setPromoError('Invalid coupon code. Try AARU10 or FESTIVE20.');
-    } else {
-      setPromoInput('');
+    setPromoSuccess('');
+    setIsApplyingPromo(true);
+
+    try {
+      const result = await onApplyPromo(promoInput.trim());
+      if (typeof result === 'boolean') {
+        if (!result) {
+          setPromoError('Invalid or inactive coupon code.');
+        } else {
+          setPromoSuccess('Coupon applied successfully!');
+          setPromoInput('');
+        }
+      } else if (result && typeof result === 'object') {
+        if (!result.success) {
+          setPromoError(result.message || 'Invalid or inactive coupon code.');
+        } else {
+          setPromoSuccess(result.message || 'Privilege discount applied successfully!');
+          setPromoInput('');
+        }
+      }
+    } catch (err: any) {
+      setPromoError(err.message || 'Error validating coupon code.');
+    } finally {
+      setIsApplyingPromo(false);
     }
   };
 
@@ -182,29 +208,54 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <div className="relative flex-1">
                 <input
                   type="text"
-                  placeholder="Coupon code (e.g. AARU10)"
+                  placeholder="Coupon code (e.g. AARU10, SILK5)"
                   value={promoInput}
-                  onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
-                  className="w-full pl-7 pr-3 py-2 bg-white border border-[#D4C7B5] text-xs uppercase placeholder:normal-case focus:outline-none"
+                  onChange={(e) => {
+                    setPromoInput(e.target.value.toUpperCase());
+                    setPromoError('');
+                  }}
+                  className="w-full pl-7 pr-3 py-2 bg-white border border-[#D4C7B5] text-xs font-mono font-bold uppercase placeholder:font-sans placeholder:font-normal placeholder:normal-case focus:outline-none focus:border-[#0F4C5C]"
                 />
                 <Tag className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" />
               </div>
               <button
                 type="submit"
-                className="px-4 py-2 bg-[#24211E] text-white text-xs font-semibold uppercase tracking-wider"
+                disabled={isApplyingPromo || !promoInput.trim()}
+                className="px-4 py-2 bg-[#24211E] hover:bg-[#0F4C5C] disabled:opacity-50 text-white text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
               >
-                Apply
+                {isApplyingPromo ? 'Checking...' : 'Apply'}
               </button>
             </form>
 
             {promoError && (
-              <p className="text-[11px] text-rose-600 font-medium">{promoError}</p>
+              <p className="text-[11px] text-rose-600 font-medium bg-rose-50 p-2 border border-rose-200">{promoError}</p>
+            )}
+
+            {promoSuccess && !promoError && (
+              <p className="text-[11px] text-emerald-700 font-medium bg-emerald-50 p-2 border border-emerald-200">{promoSuccess}</p>
             )}
 
             {appliedPromo && (
-              <div className="flex items-center justify-between text-xs text-[#2D5A46] bg-emerald-50 px-2 py-1 border border-emerald-200">
-                <span>Code <strong>{appliedPromo}</strong> applied</span>
-                <span>-₹{promoDiscount.toLocaleString('en-IN')}</span>
+              <div className="flex items-center justify-between text-xs text-[#2D5A46] bg-emerald-50 px-2.5 py-1.5 border border-emerald-200">
+                <div className="flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <span>Code <strong className="font-mono font-bold">{appliedPromo}</strong> applied</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">-₹{safeDiscount.toLocaleString('en-IN')}</span>
+                  {onRemovePromo && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onRemovePromo();
+                        setPromoSuccess('');
+                      }}
+                      className="text-gray-400 hover:text-rose-600 text-[10px] underline ml-1 cursor-pointer uppercase tracking-wider"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -214,15 +265,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <span>Subtotal</span>
                 <span>₹{subtotal.toLocaleString('en-IN')}</span>
               </div>
-              {promoDiscount > 0 && (
-                <div className="flex justify-between text-[#2D5A46]">
-                  <span>Privilege Savings</span>
-                  <span>-₹{promoDiscount.toLocaleString('en-IN')}</span>
-                </div>
+              {safeDiscount > 0 && (
+                <>
+                  <div className="flex justify-between text-[#2D5A46]">
+                    <span>Privilege Savings ({appliedPromo})</span>
+                    <span>-₹{safeDiscount.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between text-[#24211E] font-medium">
+                    <span>Remaining Subtotal</span>
+                    <span>₹{remainingSubtotal.toLocaleString('en-IN')}</span>
+                  </div>
+                </>
               )}
               <div className="flex justify-between">
                 <span>Estimated Courier Delivery</span>
-                <span>{shippingFee === 0 ? 'Complimentary' : `₹${shippingFee}`}</span>
+                <span>{shippingFee === 0 ? 'Complimentary' : `₹${shippingFee.toLocaleString('en-IN')}`}</span>
               </div>
               <div className="flex justify-between">
                 <span>Estimated GST (5%)</span>

@@ -8,7 +8,8 @@ import {
   AnnouncementSettings, 
   Category, 
   Collection,
-  CustomInquiry
+  CustomInquiry,
+  PromoCode
 } from './types';
 import { 
   initialProducts, 
@@ -43,11 +44,51 @@ import { AuthModal } from './components/AuthModal';
 import { AuthScreen } from './components/AuthScreen';
 import { WhatsAppButton } from './components/WhatsAppButton';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { PolicyPage, PolicyType } from './components/PolicyPages';
 
 export default function App() {
   // Top Level Navigation & Presentation Role Switcher
   const [currentDashboard, setCurrentDashboard] = useState<'user' | 'admin'>('user');
-  const [activeUserView, setActiveUserView] = useState<'home' | 'catalog' | 'pdp' | 'custom' | 'story' | 'about' | 'contact' | 'shop-the-look'>('home');
+  const [activeUserView, setActiveUserView] = useState<
+    'home' | 'catalog' | 'pdp' | 'custom' | 'story' | 'about' | 'contact' | 'shop-the-look' | 'returns-policy' | 'shipping-policy' | 'privacy-policy' | 'terms-of-use'
+  >(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.toLowerCase();
+      if (path.includes('returns-policy')) return 'returns-policy';
+      if (path.includes('shipping-policy')) return 'shipping-policy';
+      if (path.includes('privacy-policy')) return 'privacy-policy';
+      if (path.includes('terms-of-use')) return 'terms-of-use';
+    }
+    return 'home';
+  });
+
+  // Sync browser back/forward history with policy views
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      if (path.includes('returns-policy')) setActiveUserView('returns-policy');
+      else if (path.includes('shipping-policy')) setActiveUserView('shipping-policy');
+      else if (path.includes('privacy-policy')) setActiveUserView('privacy-policy');
+      else if (path.includes('terms-of-use')) setActiveUserView('terms-of-use');
+      else if (path === '/' || path === '') setActiveUserView('home');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateToView = (view: typeof activeUserView) => {
+    setActiveUserView(view);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+      if (view === 'returns-policy') window.history.pushState(null, '', '/returns-policy');
+      else if (view === 'shipping-policy') window.history.pushState(null, '', '/shipping-policy');
+      else if (view === 'privacy-policy') window.history.pushState(null, '', '/privacy-policy');
+      else if (view === 'terms-of-use') window.history.pushState(null, '', '/terms-of-use');
+      else if (view === 'home') window.history.pushState(null, '', '/');
+    } catch {
+      // Safe fallback if history API restricted in iframe
+    }
+  };
   const [catalogCategory, setCatalogCategory] = useState<string>('all');
   const [catalogFilter, setCatalogFilter] = useState<'all' | 'ready-to-ship' | 'handloom' | 'bridal'>('all');
 
@@ -69,6 +110,7 @@ export default function App() {
   });
   const [isGuestBrowsing, setIsGuestBrowsing] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
 
   // Bag, Checkout, Wishlist, Tracking Drawers/Modals
   const [cartItems, setCartItems] = useState<CartItem[]>([
@@ -92,6 +134,19 @@ export default function App() {
   // Promo Code State
   const [appliedPromo, setAppliedPromo] = useState('');
   const [promoDiscount, setPromoDiscount] = useState(0);
+  const [coupons, setCoupons] = useState<PromoCode[]>([]);
+
+  const fetchCoupons = async () => {
+    try {
+      const res = await fetch('/api/coupons');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setCoupons(data);
+      }
+    } catch (err) {
+      console.error('Failed to load coupons:', err);
+    }
+  };
 
   // Synchronize with backend API on mount
   useEffect(() => {
@@ -121,6 +176,8 @@ export default function App() {
         }
       })
       .catch(err => console.error('Failed to load orders from API:', err));
+
+    fetchCoupons();
   }, []);
 
   // Cart Operations
@@ -159,22 +216,82 @@ export default function App() {
     );
   };
 
-  // Promo Code Validation
-  const handleApplyPromo = (code: string): boolean => {
-    const upper = code.trim().toUpperCase();
-    const subtotal = cartItems.reduce((s, i) => s + (i.product.salePrice || i.product.price) * i.quantity, 0);
+  // Dynamic Promo Code Validation with Backend API
+  const handleApplyPromo = async (code: string): Promise<{ success: boolean; message: string; discount?: number }> => {
+    const cleanCode = code.trim().toUpperCase();
+    const currentSubtotal = cartItems.reduce((s, i) => s + (i.product.salePrice || i.product.price) * i.quantity, 0);
 
-    if (upper === 'AARU10') {
-      setAppliedPromo('AARU10');
-      setPromoDiscount(Math.round(subtotal * 0.1));
-      return true;
-    } else if (upper === 'FESTIVE20' || upper === 'SIXTHELEMENT') {
-      setAppliedPromo(upper);
-      setPromoDiscount(Math.round(subtotal * 0.2));
-      return true;
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: cleanCode, subtotal: currentSubtotal, orderSubtotal: currentSubtotal })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.valid) {
+        return {
+          success: false,
+          message: data.error || data.message || `Coupon code '${cleanCode}' is invalid or inactive.`
+        };
+      }
+
+      const calculatedDiscount = Number(data.discountAmount !== undefined ? data.discountAmount : data.discount);
+      const safeDiscount = Number.isFinite(calculatedDiscount) ? Math.min(currentSubtotal, Math.max(0, calculatedDiscount)) : 0;
+      const couponCode = data.code || data.coupon?.code || cleanCode;
+
+      setAppliedPromo(couponCode);
+      setPromoDiscount(safeDiscount);
+      return {
+        success: true,
+        message: data.message || `${data.discountPercent || 10}% OFF coupon applied successfully! (Saved ₹${safeDiscount.toLocaleString('en-IN')})`,
+        discount: safeDiscount
+      };
+    } catch (err: any) {
+      console.error('Coupon validation error:', err);
+      if (cleanCode === 'AARU10') {
+        const discount = Math.round(currentSubtotal * 0.1);
+        setAppliedPromo('AARU10');
+        setPromoDiscount(discount);
+        return { success: true, message: '10% discount applied!', discount };
+      }
+      return { success: false, message: 'Could not validate coupon code at this time.' };
     }
-    return false;
   };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo('');
+    setPromoDiscount(0);
+  };
+
+  // Keep promo discount in sync when cart items change
+  useEffect(() => {
+    if (!appliedPromo) return;
+    const currentSubtotal = cartItems.reduce(
+      (s, i) => s + (i.product.salePrice || i.product.price) * i.quantity,
+      0
+    );
+    if (currentSubtotal === 0) {
+      setPromoDiscount(0);
+      return;
+    }
+
+    fetch('/api/coupons/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: appliedPromo, subtotal: currentSubtotal, orderSubtotal: currentSubtotal })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.valid) {
+          const calculatedDiscount = Number(data.discountAmount !== undefined ? data.discountAmount : data.discount);
+          setPromoDiscount(Number.isFinite(calculatedDiscount) ? Math.min(currentSubtotal, Math.max(0, calculatedDiscount)) : 0);
+        } else {
+          setAppliedPromo('');
+          setPromoDiscount(0);
+        }
+      })
+      .catch(() => {});
+  }, [cartItems, appliedPromo]);
 
   // Wishlist Operations
   const handleToggleWishlist = (product: Product) => {
@@ -195,9 +312,11 @@ export default function App() {
     (sum, item) => sum + (item.product.salePrice || item.product.price) * item.quantity,
     0
   );
+  const safeDiscount = Math.min(subtotal, Math.max(0, Number(promoDiscount) || 0));
+  const remainingSubtotal = Math.max(0, subtotal - safeDiscount);
   const shippingFee = subtotal >= 15000 || cartItems.length === 0 ? 0 : 500;
-  const tax = Math.round((subtotal - promoDiscount) * 0.05);
-  const total = Math.max(0, subtotal - promoDiscount + shippingFee + tax);
+  const tax = Math.round(remainingSubtotal * 0.05);
+  const total = Math.max(0, remainingSubtotal + shippingFee + tax);
 
   const handleOrderSuccess = (newOrder: Order) => {
     setOrders(prev => [newOrder, ...prev]);
@@ -348,6 +467,8 @@ export default function App() {
       <AdminDashboard
         products={products}
         orders={orders}
+        coupons={coupons}
+        onRefreshCoupons={fetchCoupons}
         announcement={announcement}
         categories={categories}
         collections={collections}
@@ -403,7 +524,10 @@ export default function App() {
         onOpenCart={() => setIsCartOpen(true)}
         onOpenWishlist={() => setIsWishlistOpen(true)}
         onOpenOrders={() => setIsOrdersOpen(true)}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenAuth={(mode) => {
+          setAuthModalMode(mode === 'signup' ? 'signup' : 'login');
+          setIsAuthModalOpen(true);
+        }}
         onSignOut={() => {
           localStorage.removeItem('aaru_user_session');
           localStorage.removeItem('aaru_auth_token');
@@ -514,6 +638,10 @@ export default function App() {
             }}
             onSelectRelated={navigateToProduct}
             relatedProducts={products.filter(p => p.id !== selectedProduct.id)}
+            onNavigateToPolicy={(pol) => {
+              setActiveUserView(pol);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           />
         ) : activeUserView === 'shop-the-look' ? (
           /* Dedicated Shop the Look Editorial Lookbook */
@@ -611,6 +739,13 @@ export default function App() {
             <ContactSection />
             <FaqSection />
           </div>
+        ) : activeUserView === 'returns-policy' || activeUserView === 'shipping-policy' || activeUserView === 'privacy-policy' || activeUserView === 'terms-of-use' ? (
+          /* Four Dedicated Static Legal & Policy Documentation Pages */
+          <PolicyPage
+            type={activeUserView as PolicyType}
+            onNavigateHome={() => navigateToView('home')}
+            onNavigatePolicy={(policy) => navigateToView(policy)}
+          />
         ) : (
           /* Complete Editorial Home & Storytelling-first Commerce Flow:
              1. Hero Banner
@@ -717,8 +852,7 @@ export default function App() {
 
       {/* Luxury Brand Footer */}
       <Footer onNavigate={(v) => {
-        setActiveUserView(v);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigateToView(v as any);
       }} />
 
       {/* Floating WhatsApp Concierge */}
@@ -737,6 +871,7 @@ export default function App() {
         }}
         appliedPromo={appliedPromo}
         onApplyPromo={handleApplyPromo}
+        onRemovePromo={handleRemovePromo}
         promoDiscount={promoDiscount}
       />
 
@@ -753,6 +888,9 @@ export default function App() {
         onOrderSuccess={handleOrderSuccess}
         userEmail={currentUser?.email}
         userName={currentUser?.name}
+        appliedPromo={appliedPromo}
+        onApplyPromo={handleApplyPromo}
+        onRemovePromo={handleRemovePromo}
       />
 
       {/* Live Order History & Tracking Modal */}
@@ -779,6 +917,7 @@ export default function App() {
       {/* Email / OTP Login Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
+        initialMode={authModalMode}
         onClose={() => setIsAuthModalOpen(false)}
         onLoginSuccess={(user) => {
           setCurrentUser(user);

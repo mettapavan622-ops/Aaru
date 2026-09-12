@@ -1,6 +1,6 @@
 export interface ProductVariant {
   id: string;
-  size: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'Free Size' | 'Custom';
+  size: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'Free Size' | 'Custom' | string;
   color: string;
   colorCode: string;
   inventory: number;
@@ -188,6 +188,7 @@ export interface CustomClothingRequest {
 }
 
 export interface PromoCode {
+  id?: string;
   code: string;
   discountPercent: number;
   maxDiscount?: number;
@@ -195,6 +196,8 @@ export interface PromoCode {
   description: string;
   isActive: boolean;
   expiryDate?: string;
+  usageCount?: number;
+  createdAt?: string;
 }
 
 export interface AnnouncementSettings {

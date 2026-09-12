@@ -272,10 +272,11 @@ export const INITIAL_PRODUCTS: Product[] = [
       { id: 'v-004-1', size: 'XS', color: 'Sage Green', colorCode: '#2D5A46', inventory: 4, sku: 'AARU-ANR-004-XS', isAvailable: true },
       { id: 'v-004-2', size: 'S', color: 'Sage Green', colorCode: '#2D5A46', inventory: 8, sku: 'AARU-ANR-004-S', isAvailable: true },
       { id: 'v-004-3', size: 'M', color: 'Sage Green', colorCode: '#2D5A46', inventory: 5, sku: 'AARU-ANR-004-M', isAvailable: true },
-      { id: 'v-004-4', size: 'L', color: 'Sage Green', colorCode: '#2D5A46', inventory: 2, sku: 'AARU-ANR-004-L', isAvailable: true },
-      { id: 'v-004-5', size: 'XL', color: 'Sage Green', colorCode: '#2D5A46', inventory: 0, sku: 'AARU-ANR-004-XL', isAvailable: false }
+      { id: 'v-004-4', size: 'L', color: 'Sage Green', colorCode: '#2D5A46', inventory: 6, sku: 'AARU-ANR-004-L', isAvailable: true },
+      { id: 'v-004-5', size: 'XL', color: 'Sage Green', colorCode: '#2D5A46', inventory: 3, sku: 'AARU-ANR-004-XL', isAvailable: true },
+      { id: 'v-004-6', size: 'XXL', color: 'Sage Green', colorCode: '#2D5A46', inventory: 4, sku: 'AARU-ANR-004-XXL', isAvailable: true }
     ],
-    totalInventory: 19,
+    totalInventory: 30,
     tags: ['Ready to Ship', '3-Piece Set', 'Anarkali'],
     occasion: 'Mehendi, Sangeet & Festive Gatherings',
     isFeatured: true,
@@ -309,12 +310,14 @@ export const INITIAL_PRODUCTS: Product[] = [
       'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=85'
     ],
     variants: [
-      { id: 'v-005-1', size: 'S', color: 'Royal Crimson', colorCode: '#7A1C28', inventory: 2, sku: 'AARU-LEH-005-S', isAvailable: true },
-      { id: 'v-005-2', size: 'M', color: 'Royal Crimson', colorCode: '#7A1C28', inventory: 3, sku: 'AARU-LEH-005-M', isAvailable: true },
-      { id: 'v-005-3', size: 'L', color: 'Royal Crimson', colorCode: '#7A1C28', inventory: 1, sku: 'AARU-LEH-005-L', isAvailable: true },
-      { id: 'v-005-4', size: 'Custom', color: 'Royal Crimson', colorCode: '#7A1C28', inventory: 5, sku: 'AARU-LEH-005-CUST', isAvailable: true }
+      { id: 'v-005-1', size: 'XS', color: 'Royal Crimson', colorCode: '#7A1C28', inventory: 2, sku: 'AARU-LEH-005-XS', isAvailable: true },
+      { id: 'v-005-2', size: 'S', color: 'Royal Crimson', colorCode: '#7A1C28', inventory: 4, sku: 'AARU-LEH-005-S', isAvailable: true },
+      { id: 'v-005-3', size: 'M', color: 'Royal Crimson', colorCode: '#7A1C28', inventory: 5, sku: 'AARU-LEH-005-M', isAvailable: true },
+      { id: 'v-005-4', size: 'L', color: 'Royal Crimson', colorCode: '#7A1C28', inventory: 3, sku: 'AARU-LEH-005-L', isAvailable: true },
+      { id: 'v-005-5', size: 'XL', color: 'Royal Crimson', colorCode: '#7A1C28', inventory: 2, sku: 'AARU-LEH-005-XL', isAvailable: true },
+      { id: 'v-005-6', size: 'XXL', color: 'Royal Crimson', colorCode: '#7A1C28', inventory: 2, sku: 'AARU-LEH-005-XXL', isAvailable: true }
     ],
-    totalInventory: 11,
+    totalInventory: 18,
     tags: ['Bridal', 'Bespoke', 'Heirloom'],
     occasion: 'Weddings & Bridal Receptions',
     isFeatured: false,
@@ -383,10 +386,14 @@ export const INITIAL_PRODUCTS: Product[] = [
       'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?auto=format&fit=crop&w=1000&q=85'
     ],
     variants: [
-      { id: 'v-007-1', size: 'S', color: 'Midnight Indigo', colorCode: '#1A2A3A', inventory: 5, sku: 'AARU-DRS-007-S', isAvailable: true },
-      { id: 'v-007-2', size: 'M', color: 'Midnight Indigo', colorCode: '#1A2A3A', inventory: 4, sku: 'AARU-DRS-007-M', isAvailable: true }
+      { id: 'v-007-1', size: 'XS', color: 'Midnight Indigo', colorCode: '#1A2A3A', inventory: 3, sku: 'AARU-DRS-007-XS', isAvailable: true },
+      { id: 'v-007-2', size: 'S', color: 'Midnight Indigo', colorCode: '#1A2A3A', inventory: 5, sku: 'AARU-DRS-007-S', isAvailable: true },
+      { id: 'v-007-3', size: 'M', color: 'Midnight Indigo', colorCode: '#1A2A3A', inventory: 4, sku: 'AARU-DRS-007-M', isAvailable: true },
+      { id: 'v-007-4', size: 'L', color: 'Midnight Indigo', colorCode: '#1A2A3A', inventory: 4, sku: 'AARU-DRS-007-L', isAvailable: true },
+      { id: 'v-007-5', size: 'XL', color: 'Midnight Indigo', colorCode: '#1A2A3A', inventory: 2, sku: 'AARU-DRS-007-XL', isAvailable: true },
+      { id: 'v-007-6', size: 'XXL', color: 'Midnight Indigo', colorCode: '#1A2A3A', inventory: 3, sku: 'AARU-DRS-007-XXL', isAvailable: true }
     ],
-    totalInventory: 9,
+    totalInventory: 21,
     tags: ['Ready to Ship', 'Concept Dress', 'Evening Wear'],
     occasion: 'Cocktail Gala & Receptions',
     isFeatured: true,
@@ -421,9 +428,12 @@ export const INITIAL_PRODUCTS: Product[] = [
     variants: [
       { id: 'v-008-1', size: 'XS', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 3, sku: 'AARU-CRD-008-XS', isAvailable: true },
       { id: 'v-008-2', size: 'S', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 6, sku: 'AARU-CRD-008-S', isAvailable: true },
-      { id: 'v-008-3', size: 'M', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 4, sku: 'AARU-CRD-008-M', isAvailable: true }
+      { id: 'v-008-3', size: 'M', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 4, sku: 'AARU-CRD-008-M', isAvailable: true },
+      { id: 'v-008-4', size: 'L', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 5, sku: 'AARU-CRD-008-L', isAvailable: true },
+      { id: 'v-008-5', size: 'XL', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 2, sku: 'AARU-CRD-008-XL', isAvailable: true },
+      { id: 'v-008-6', size: 'XXL', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 3, sku: 'AARU-CRD-008-XXL', isAvailable: true }
     ],
-    totalInventory: 13,
+    totalInventory: 23,
     tags: ['Ready to Ship', 'Co-Ord Set', 'Tussar Silk'],
     occasion: 'Intimate Ceremonies, Soirées & Art Openings',
     isFeatured: true,
@@ -528,9 +538,14 @@ export const INITIAL_PRODUCTS: Product[] = [
       'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1000&q=85'
     ],
     variants: [
-      { id: 'v-011-1', size: 'Free Size', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 7, sku: 'AARU-OCC-011-GD', isAvailable: true }
+      { id: 'v-011-1', size: 'XS', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 3, sku: 'AARU-OCC-011-XS', isAvailable: true },
+      { id: 'v-011-2', size: 'S', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 5, sku: 'AARU-OCC-011-S', isAvailable: true },
+      { id: 'v-011-3', size: 'M', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 4, sku: 'AARU-OCC-011-M', isAvailable: true },
+      { id: 'v-011-4', size: 'L', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 4, sku: 'AARU-OCC-011-L', isAvailable: true },
+      { id: 'v-011-5', size: 'XL', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 2, sku: 'AARU-OCC-011-XL', isAvailable: true },
+      { id: 'v-011-6', size: 'XXL', color: 'Antique Sand Gold', colorCode: '#9C7C38', inventory: 3, sku: 'AARU-OCC-011-XXL', isAvailable: true }
     ],
-    totalInventory: 7,
+    totalInventory: 21,
     tags: ['Ready to Ship', 'Occasion Wear', 'Heirloom Zari'],
     occasion: 'Sangeet, Reception & High Soirées',
     isFeatured: true,
@@ -660,9 +675,54 @@ export const FAQS = [
   }
 ];
 
+export const INITIAL_COUPONS: PromoCode[] = [
+  {
+    id: 'coup-001',
+    code: 'AARU10',
+    discountPercent: 10,
+    minOrderValue: 0,
+    description: '10% privilege discount on all signature handloom weaves',
+    isActive: true,
+    usageCount: 18,
+    createdAt: '2026-09-01T10:00:00Z'
+  },
+  {
+    id: 'coup-002',
+    code: 'SILK5',
+    discountPercent: 5,
+    minOrderValue: 0,
+    description: '5% welcome privilege across ready-to-ship silks',
+    isActive: true,
+    usageCount: 29,
+    createdAt: '2026-09-05T12:00:00Z'
+  },
+  {
+    id: 'coup-003',
+    code: 'FESTIVE20',
+    discountPercent: 20,
+    minOrderValue: 15000,
+    description: '20% festive celebratory discount on orders above ₹15,000',
+    isActive: true,
+    usageCount: 12,
+    createdAt: '2026-09-08T09:00:00Z'
+  },
+  {
+    id: 'coup-004',
+    code: 'ROYAL15',
+    discountPercent: 15,
+    minOrderValue: 25000,
+    description: '15% off royal bridal handlooms above ₹25,000',
+    isActive: false,
+    usageCount: 0,
+    createdAt: '2026-09-10T15:30:00Z'
+  }
+];
+
 export const initialProducts = INITIAL_PRODUCTS;
 export const categories = CATEGORIES;
 export const collections = COLLECTIONS;
 export const defaultAnnouncement = INITIAL_ANNOUNCEMENT;
 export const sampleOrders = INITIAL_ORDERS;
+export const initialCoupons = INITIAL_COUPONS;
+
 

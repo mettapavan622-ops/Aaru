@@ -14,7 +14,11 @@ import {
   ArrowRight, 
   Sparkles,
   ShieldCheck,
-  ChevronRight
+  ChevronRight,
+  Phone,
+  Mail,
+  LogIn,
+  UserPlus
 } from 'lucide-react';
 import { Product, AnnouncementSettings, User, Category } from '../types';
 import { CategoriesMegaMenu } from './CategoriesMegaMenu';
@@ -32,7 +36,7 @@ interface HeaderProps {
   onNavigate?: (tab: any) => void;
   onOpenCart: () => void;
   onOpenWishlist: () => void;
-  onOpenAuth: () => void;
+  onOpenAuth: (mode?: 'login' | 'signup') => void;
   onSignOut?: () => void;
   onOpenOrders: () => void;
   onSearchSelect?: (product: Product) => void;
@@ -135,7 +139,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-30 w-full bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#E8DFD5] transition-all">
       {/* Top Presentation Bar & Role Switcher */}
-      <div className="bg-[#24211E] text-[#FAF7F2] text-xs px-4 py-1.5 flex items-center justify-between">
+      <div className="bg-[#24211E] text-[#FAF7F2] text-xs px-4 py-1.5 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="text-[#D4C7B5] hidden sm:inline">AARU Luxury Ecosystem:</span>
@@ -145,7 +149,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-[#A89882] text-[11px] hidden md:inline">Presentation Mode:</span>
+          <span className="text-[#A89882] text-[11px] hidden md:inline">Mode:</span>
           <div className="inline-flex p-0.5 bg-[#38332E] rounded-sm border border-[#4D463F]">
             <button
               id="switch-to-user-btn"
@@ -198,25 +202,25 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       {/* Tier 1: Utility Bar (Logo, Search, Account, Wishlist, Cart, WhatsApp) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-4 relative">
         {/* Mobile Menu Toggle & Brand Logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0">
           <button
             id="mobile-menu-toggle"
             type="button"
             aria-label="Toggle Navigation Menu"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-1.5 text-[#24211E] lg:hidden hover:text-[#0F4C5C]"
+            className="p-1.5 sm:p-2 text-[#24211E] lg:hidden hover:text-[#0F4C5C] -ml-1 rounded-sm active:bg-[#E8DFD5]/40 transition-colors shrink-0"
           >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isMobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
           </button>
 
           <div 
             id="aaru-logo"
             onClick={() => setActiveTab('home')}
-            className="cursor-pointer group flex items-center select-none"
+            className="cursor-pointer group flex items-center select-none shrink-0"
           >
-            <AaruLogo size="md" />
+            <AaruLogo size="responsive" />
           </div>
         </div>
 
@@ -284,160 +288,43 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Right Actions: Mobile Search, WhatsApp, Account, Wishlist, Cart */}
-        <div className="flex items-center gap-1.5 sm:gap-3">
+        {/* Right Actions: Mobile Search, WhatsApp (sm+), Wishlist, Cart, Account */}
+        <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 shrink-0">
           {/* Mobile Search Icon */}
           <button
             id="mobile-search-btn"
             type="button"
             aria-label="Open search modal"
             onClick={() => setIsSearchOpen(true)}
-            className="p-2 text-[#24211E] hover:text-[#0F4C5C] md:hidden"
+            className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] md:hidden rounded-sm transition-colors"
           >
             <Search className="w-5 h-5" />
           </button>
 
-          {/* WhatsApp Direct Chat Hyperlink */}
+          {/* WhatsApp Direct Chat Hyperlink (Visible on sm+ screens; on small mobile, floating button is always present) */}
           <a
             id="header-whatsapp-link"
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
             title="Chat directly with AARU Atelier Stylist on WhatsApp"
-            className="p-2 text-[#0F4C5C] hover:text-[#0b3844] relative flex items-center gap-1 transition-colors"
+            className="p-1.5 sm:p-2 text-[#0F4C5C] hover:text-[#0b3844] relative hidden sm:flex items-center gap-1 transition-colors rounded-sm"
           >
             <MessageCircle className="w-5 h-5 text-[#0F4C5C]" />
             <span className="hidden xl:inline text-xs font-medium text-[#0F4C5C]">WhatsApp Atelier</span>
           </a>
 
-          {/* Account Dropdown */}
-          <div className="relative" ref={accountMenuRef}>
-            <button
-              id="account-dropdown-btn"
-              type="button"
-              aria-label="Account options"
-              onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
-              className="p-2 text-[#24211E] hover:text-[#0F4C5C] flex items-center gap-1 transition-colors"
-            >
-              <UserIcon className="w-5 h-5" />
-              <ChevronDown className="w-3.5 h-3.5 hidden sm:block text-[#8A8175]" />
-            </button>
-
-            {isAccountMenuOpen && (
-              <div 
-                id="account-dropdown-menu"
-                className="absolute right-0 mt-2 w-56 bg-white border border-[#E8DFD5] shadow-xl z-50 py-2 divide-y divide-[#E8DFD5]"
-              >
-                <div className="px-4 py-2.5 bg-[#FAF7F2]">
-                  {currentUser ? (
-                    <div>
-                      <p className="text-xs font-semibold text-[#24211E]">{currentUser.name}</p>
-                      <p className="text-[11px] text-[#736B5E] truncate">{currentUser.email}</p>
-                      <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-medium tracking-wide uppercase bg-[#0F4C5C]/10 text-[#0F4C5C] rounded-none">
-                        {currentUser.role === 'admin' ? 'Atelier Administrator' : 'Privilege Client'}
-                      </span>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-xs font-semibold text-[#24211E]">Welcome to AARU</p>
-                      <p className="text-[11px] text-[#736B5E]">Sign in for order tracking & bespoke consultations</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="py-1">
-                  {currentUser ? (
-                    <>
-                      <button
-                        id="account-orders-link"
-                        type="button"
-                        onClick={() => {
-                          onOpenOrders();
-                          setIsAccountMenuOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs text-[#24211E] hover:bg-[#FAF7F2] flex items-center justify-between cursor-pointer"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Package className="w-3.5 h-3.5 text-[#0F4C5C]" />
-                          Your Orders & Tracking
-                        </span>
-                        <ArrowRight className="w-3 h-3 text-[#8A8175]" />
-                      </button>
-
-                      <button
-                        id="account-custom-clothing-link"
-                        type="button"
-                        onClick={() => {
-                          setActiveTab('custom-clothing');
-                          setIsAccountMenuOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs text-[#24211E] hover:bg-[#FAF7F2] flex items-center justify-between cursor-pointer"
-                      >
-                        <span className="flex items-center gap-2">
-                          <Sparkles className="w-3.5 h-3.5 text-[#9C7C38]" />
-                          Bespoke Atelier Requests
-                        </span>
-                      </button>
-
-                      <button
-                        id="account-admin-switch"
-                        type="button"
-                        onClick={() => {
-                          onToggleMode('admin');
-                          setIsAccountMenuOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs text-[#9C7C38] font-semibold hover:bg-[#FAF7F2] flex items-center gap-2 cursor-pointer"
-                      >
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        Admin Operations Dashboard
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      id="header-signin-btn"
-                      type="button"
-                      onClick={() => {
-                        onOpenAuth();
-                        setIsAccountMenuOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-[#0F4C5C] hover:bg-[#FAF7F2] cursor-pointer"
-                    >
-                      Sign In / Generate OTP
-                    </button>
-                  )}
-                </div>
-
-                {currentUser && (
-                  <div className="py-1">
-                    <button
-                      id="account-signout-btn"
-                      type="button"
-                      onClick={() => {
-                        onSignOut();
-                        setIsAccountMenuOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-xs text-[#C08081] hover:bg-rose-50 flex items-center gap-2 cursor-pointer"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
           {/* Wishlist Icon */}
           <button
             id="header-wishlist-btn"
             type="button"
-            aria-label="Wishlist"
+            aria-label={`Wishlist (${wishlistCount} items)`}
             onClick={onOpenWishlist}
-            className="p-2 text-[#24211E] hover:text-[#0F4C5C] relative transition-colors"
+            className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] relative transition-colors rounded-sm"
           >
             <Heart className="w-5 h-5" />
             {wishlistCount > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#C08081] text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
+              <span className="absolute -top-0.5 -right-0.5 sm:top-0 sm:right-0 min-w-[17px] h-[17px] px-1 rounded-full bg-[#C08081] text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
                 {wishlistCount}
               </span>
             )}
@@ -447,13 +334,13 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             id="header-cart-btn"
             type="button"
-            aria-label="Shopping Cart"
+            aria-label={`Shopping Cart (${cartCount} items)`}
             onClick={onOpenCart}
-            className="p-2 text-[#24211E] hover:text-[#0F4C5C] relative flex items-center gap-1.5 transition-colors"
+            className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] relative flex items-center gap-1.5 transition-colors rounded-sm"
           >
             <ShoppingBag className="w-5 h-5" />
             {cartCount > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#0F4C5C] text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
+              <span className="absolute -top-0.5 -right-0.5 sm:top-0 sm:right-0 min-w-[17px] h-[17px] px-1 rounded-full bg-[#0F4C5C] text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
                 {cartCount}
               </span>
             )}
@@ -461,7 +348,222 @@ export const Header: React.FC<HeaderProps> = ({
               Cart
             </span>
           </button>
+
+          {/* Account Dropdown */}
+          <div className="relative" ref={accountMenuRef}>
+            <button
+              id="account-dropdown-btn"
+              type="button"
+              aria-label="Account options"
+              onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+              className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] flex items-center gap-1 transition-colors rounded-sm"
+            >
+              <UserIcon className="w-5 h-5" />
+              <ChevronDown className="w-3.5 h-3.5 hidden sm:block text-[#8A8175]" />
+            </button>
+
+            {isAccountMenuOpen && (
+              <div 
+                id="account-dropdown-menu"
+                className="absolute right-0 mt-2 w-72 bg-white border border-[#E8DFD5] shadow-2xl z-50 overflow-hidden divide-y divide-[#E8DFD5]"
+              >
+                {currentUser ? (
+                  <>
+                    {/* User Profile Details: Name, Mobile, Mail ID */}
+                    <div className="p-4 bg-[#FAF7F2]">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-[#0F4C5C] text-white flex items-center justify-center font-serif text-base font-bold shadow-xs shrink-0">
+                          {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'A'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-serif font-bold text-[#24211E] truncate">{currentUser.name}</p>
+                          <span className="inline-block px-1.5 py-0.5 text-[9px] font-sans font-semibold tracking-wider uppercase bg-[#0F4C5C]/10 text-[#0F4C5C] mt-0.5">
+                            {currentUser.role === 'admin' ? 'Atelier Administrator' : 'Privilege Client'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Contact Credentials: Phone and Mail */}
+                      <div className="space-y-1.5 pt-2.5 border-t border-[#E8DFD5]/80 text-[11px]">
+                        <div className="flex items-center gap-2 text-[#5C5549]">
+                          <Phone className="w-3.5 h-3.5 text-[#8C6D37] shrink-0" />
+                          <span className="text-[#8C6D37] font-medium">Mobile:</span>
+                          <span className="font-mono text-[#24211E] font-medium truncate">
+                            {currentUser.phone || '+91 98451 23098'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[#5C5549]">
+                          <Mail className="w-3.5 h-3.5 text-[#8C6D37] shrink-0" />
+                          <span className="text-[#8C6D37] font-medium">Email:</span>
+                          <span className="text-[#24211E] font-medium truncate">
+                            {currentUser.email}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Navigation Actions: Orders & Tracking only (Bespoke & Admin buttons removed) */}
+                    <div className="py-1">
+                      <button
+                        id="account-orders-link"
+                        type="button"
+                        onClick={() => {
+                          onOpenOrders();
+                          setIsAccountMenuOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[#24211E] hover:bg-[#FAF7F2] flex items-center justify-between cursor-pointer transition-colors"
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <Package className="w-4 h-4 text-[#0F4C5C]" />
+                          <span>Your Orders & Tracking</span>
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5 text-[#8A8175]" />
+                      </button>
+                    </div>
+
+                    {/* Sign Out Action */}
+                    <div className="py-1">
+                      <button
+                        id="account-signout-btn"
+                        type="button"
+                        onClick={() => {
+                          onSignOut();
+                          setIsAccountMenuOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-xs font-semibold text-[#C08081] hover:bg-rose-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Guest State: Clear SignIn & SignUp Options */}
+                    <div className="p-4 bg-[#FAF7F2]">
+                      <div className="flex items-center gap-2 mb-1">
+                        <UserIcon className="w-4 h-4 text-[#0F4C5C]" />
+                        <p className="text-xs font-serif font-bold text-[#24211E] tracking-wide">Welcome to AARU Atelier</p>
+                      </div>
+                      <p className="text-[11px] text-[#736B5E] leading-relaxed">
+                        Sign in to track orders in real-time or create an account for bespoke consultations.
+                      </p>
+                    </div>
+
+                    <div className="p-3 space-y-2">
+                      {/* Option 1: Sign In */}
+                      <button
+                        id="header-signin-btn"
+                        type="button"
+                        onClick={() => {
+                          onOpenAuth('login');
+                          setIsAccountMenuOpen(false);
+                        }}
+                        className="w-full py-2.5 px-4 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                        <span>Sign In</span>
+                      </button>
+
+                      {/* Option 2: Sign Up */}
+                      <button
+                        id="header-signup-btn"
+                        type="button"
+                        onClick={() => {
+                          onOpenAuth('signup');
+                          setIsAccountMenuOpen(false);
+                        }}
+                        className="w-full py-2.5 px-4 bg-white hover:bg-[#FAF7F2] border border-[#0F4C5C] text-[#0F4C5C] text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Sign Up / Register</span>
+                      </button>
+                    </div>
+
+                    <div className="px-4 py-2 bg-white text-[10px] text-[#8C6D37] flex items-center justify-center gap-1.5 border-t border-[#E8DFD5]/60">
+                      <ShieldCheck className="w-3 h-3 text-[#8C6D37]" />
+                      <span>Instant Mobile OTP & Google Access</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Mobile Search Overlay Bar when search icon is clicked */}
+        {isSearchOpen && (
+          <div className="md:hidden absolute inset-0 z-40 bg-[#FAF7F2] px-3 flex items-center gap-2 border-b border-[#D4C7B5]">
+            <div className="relative flex-1">
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search handcrafted sarees, organza, silks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 bg-white border border-[#D4C7B5] focus:border-[#0F4C5C] text-xs text-[#24211E] placeholder:text-[#8A8175] focus:outline-none"
+              />
+              <Search className="w-4 h-4 text-[#8A8175] absolute left-3 top-2.5" />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-xs text-[#8A8175] hover:text-[#24211E]"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsSearchOpen(false);
+                setSearchQuery('');
+              }}
+              className="text-xs font-semibold text-[#0F4C5C] px-2 py-1.5 shrink-0 cursor-pointer"
+            >
+              Cancel
+            </button>
+
+            {/* Mobile Autocomplete Results Dropdown */}
+            {searchQuery.trim() !== '' && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#D4C7B5] shadow-xl z-50 p-2 divide-y divide-[#E8DFD5] max-h-72 overflow-y-auto">
+                {searchResults.length > 0 ? (
+                  <div>
+                    <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#8C6D37]">
+                      Matching Creations ({searchResults.length})
+                    </div>
+                    {searchResults.map(prod => (
+                      <div
+                        key={prod.id}
+                        onClick={() => {
+                          if (onSearchSelect) onSearchSelect(prod);
+                          setIsSearchOpen(false);
+                          setSearchQuery('');
+                        }}
+                        className="p-2 hover:bg-[#FAF7F2] cursor-pointer flex items-center gap-3 transition-colors"
+                      >
+                        <img 
+                          src={prod.images[0]} 
+                          alt={prod.title} 
+                          className="w-10 h-12 object-cover bg-[#F5EFE6]" 
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-serif font-semibold text-[#24211E] truncate">{prod.title}</p>
+                          <p className="text-[11px] text-[#736B5E]">{prod.category} • ₹{prod.price.toLocaleString('en-IN')}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-3 text-center">
+                    <p className="text-xs text-[#736B5E]">No matching weaves found for "{searchQuery}".</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tier 2: Category & Curated Navigation (Desktop) */}

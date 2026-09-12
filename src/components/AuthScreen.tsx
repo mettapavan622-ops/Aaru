@@ -19,6 +19,7 @@ interface AuthScreenProps {
   onContinueAsGuest?: () => void;
   isModal?: boolean;
   onClose?: () => void;
+  initialMode?: 'login' | 'signup';
 }
 
 const COUNTRY_CODES = [
@@ -36,11 +37,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   onLoginSuccess,
   onContinueAsGuest,
   isModal = false,
-  onClose
+  onClose,
+  initialMode = 'login'
 }) => {
   // Mode: 'login' | 'signup'
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>(initialMode);
   const [logoDisplayMode, setLogoDisplayMode] = useState<'dual' | 'telugu' | 'english'>('dual');
+
+  useEffect(() => {
+    if (initialMode) {
+      setAuthMode(initialMode);
+    }
+  }, [initialMode]);
 
   // Mobile Auth State
   const [countryCode, setCountryCode] = useState('+1');

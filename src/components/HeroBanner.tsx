@@ -73,7 +73,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 id="hero-explore-btn"
                 type="button"
                 onClick={handleShopNewArrivals}
-                className="px-6 sm:px-7 py-3.5 bg-[#0F4C5C] hover:bg-[#0b3844] text-[#FAF7F2] text-xs font-semibold tracking-[0.16em] uppercase shadow-md transition-all duration-300 hover:translate-x-0.5 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto text-center"
+                className="px-6 sm:px-7 py-3.5 bg-[#0F4C5C] hover:bg-[#E8B4B8] hover:text-black text-[#FAF7F2] text-xs font-semibold tracking-[0.16em] uppercase shadow-md transition-all duration-300 hover:translate-x-0.5 flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto text-center border border-transparent hover:border-[#E8B4B8]"
               >
                 <span>Shop New Arrivals</span>
                 <ArrowRight className="w-4 h-4" />
@@ -83,7 +83,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 id="hero-story-btn"
                 type="button"
                 onClick={handleStory}
-                className="px-6 sm:px-7 py-3.5 bg-transparent hover:bg-[#F5EFE6] text-[#24211E] text-xs font-semibold tracking-[0.16em] uppercase border border-[#D4C7B5] transition-colors cursor-pointer w-full sm:w-auto text-center"
+                className="px-6 sm:px-7 py-3.5 bg-transparent hover:bg-[#E8B4B8] hover:text-black text-[#24211E] text-xs font-semibold tracking-[0.16em] uppercase border border-[#D4C7B5] hover:border-[#E8B4B8] transition-all cursor-pointer w-full sm:w-auto text-center"
               >
                 The Sixth Element Story
               </button>
