@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Product, ProductVariant } from '../../types';
 import { 
   Sparkles, 
@@ -12,7 +12,10 @@ import {
   Image as ImageIcon, 
   PackageCheck, 
   CheckCircle, 
-  ExternalLink 
+  ExternalLink,
+  Upload,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
 interface ProductEditorProps {
@@ -71,26 +74,15 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({
     productToEdit?.returnPolicy || '7-day standard atelier returns on unworn items with security tags intact.'
   );
 
-  // 5. SEO Engine
-  const [slug, setSlug] = useState(productToEdit?.slug || '');
-  const [metaTitle, setMetaTitle] = useState(productToEdit?.seo.metaTitle || '');
-  const [metaDescription, setMetaDescription] = useState(productToEdit?.seo.metaDescription || '');
-  const [keywords, setKeywords] = useState<string>(productToEdit?.seo.keywords.join(', ') || 'Saree, Handloom, AARU, Luxury Silk');
+  // Upload & Delete Image State
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [deletingImageUrl, setDeletingImageUrl] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-
-  // Auto-generate slug and meta title if blank
-  useEffect(() => {
-    if (!productToEdit && title) {
-      const generatedSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      setSlug(generatedSlug);
-      setMetaTitle(`${title} | AARU Luxury Handlooms`);
-      if (!metaDescription) {
-        setMetaDescription(`Handcrafted ${title} in ${fabric}. Woven with timeless precision for the woman of the Sixth Element.`);
-      }
-    }
-  }, [title, fabric, productToEdit]);
 
   // Calculations
   const parsedSalePrice = salePrice ? parseFloat(salePrice) : undefined;
@@ -126,24 +118,105 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({
 
   // Image handlers
   const addImage = () => {
-    if (!newImageUrl) return;
-    setImages([...images, newImageUrl]);
+    if (!newImageUrl.trim()) return;
+    setImages([...images, newImageUrl.trim()]);
     setNewImageUrl('');
+    setUploadSuccess('Image URL added.');
+    setTimeout(() => setUploadSuccess(null), 3000);
   };
 
-  const removeImage = (index: number) => {
-    if (images.length <= 1) return;
-    setImages(images.filter((_, i) => i !== index));
+  // Upload multiple images from disk
+  const handleMultiFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+    setUploadSuccess(null);
+
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('images', files[i]);
+      }
+      if (productToEdit?.id) {
+        formData.append('productId', productToEdit.id);
+      }
+
+      const response = await fetch(
+        `/api/products/images/upload${productToEdit?.id ? `?productId=${encodeURIComponent(productToEdit.id)}` : ''}`,
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to upload images.');
+      }
+
+      if (data.urls && data.urls.length > 0) {
+        setImages(prev => [...prev, ...data.urls]);
+        setUploadSuccess(`Successfully uploaded and stored ${data.urls.length} image(s).`);
+        setTimeout(() => setUploadSuccess(null), 4000);
+      }
+    } catch (err: any) {
+      console.error('Image upload failed:', err);
+      setUploadError(err.message || 'Failed to upload images. Please check the files and try again.');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Delete an image from storage and remove from database
+  const handleDeleteUploadedImage = async (imgUrl: string, index: number) => {
+    if (deletingImageUrl) return;
+    setDeletingImageUrl(imgUrl);
+    setUploadError(null);
+
+    try {
+      // Send deletion request to backend API
+      const response = await fetch('/api/products/images', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrl: imgUrl,
+          productId: productToEdit?.id
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        console.warn('Server delete image warning:', data.error);
+      }
+
+      // Remove from local component state
+      setImages(prev => prev.filter((_, i) => i !== index));
+      setUploadSuccess('Image deleted from server storage and product record.');
+      setTimeout(() => setUploadSuccess(null), 3500);
+    } catch (err: any) {
+      console.error('Failed to delete image:', err);
+      // Still remove from UI state
+      setImages(prev => prev.filter((_, i) => i !== index));
+    } finally {
+      setDeletingImageUrl(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    const generatedSlug = (productToEdit?.slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')) || 'weave';
+
     const payload: Partial<Product> = {
       title,
       subtitle,
-      slug: slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      slug: generatedSlug,
       category,
       collection,
       price,
@@ -160,9 +233,9 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({
       variants,
       totalInventory,
       seo: {
-        metaTitle: metaTitle || `${title} | AARU`,
-        metaDescription: metaDescription || description.slice(0, 150),
-        keywords: keywords.split(',').map(k => k.trim())
+        metaTitle: productToEdit?.seo?.metaTitle || `${title} | AARU Luxury Handlooms`,
+        metaDescription: productToEdit?.seo?.metaDescription || description.slice(0, 150),
+        keywords: productToEdit?.seo?.keywords || ['AARU', 'Luxury Saree', 'Handloom', fabric]
       }
     };
 
@@ -340,39 +413,145 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({
             Media Gallery & Textile Descriptions
           </h3>
 
-          {/* Image URLs & Previews */}
+          {/* Feedback alerts */}
+          {uploadError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{uploadError}</span>
+            </div>
+          )}
+
+          {uploadSuccess && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{uploadSuccess}</span>
+            </div>
+          )}
+
+          {/* Multi-Image Upload Drop Area */}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5549] mb-2">High-Resolution Textile Images</label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 mb-3">
-              {images.map((img, idx) => (
-                <div key={idx} className="relative aspect-[3/4] border border-[#D4C7B5] bg-[#F5EFE6] group overflow-hidden">
-                  <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5549] mb-2">
+              Product Images ({images.length} uploaded)
+            </label>
+
+            <div 
+              onClick={() => !isUploading && fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-none p-6 text-center cursor-pointer transition-all mb-4 ${
+                isUploading 
+                  ? 'border-[#0F4C5C] bg-[#FAF7F2]' 
+                  : 'border-[#C5B7A5] hover:border-[#0F4C5C] bg-[#FAF7F2] hover:bg-[#F2ECE1]'
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleMultiFileUpload}
+                className="hidden"
+                disabled={isUploading}
+              />
+              {isUploading ? (
+                <div className="flex flex-col items-center justify-center gap-2 text-[#0F4C5C]">
+                  <Loader2 className="w-7 h-7 animate-spin" />
+                  <p className="text-xs font-semibold uppercase tracking-wider">Uploading and Storing Images...</p>
+                  <p className="text-[11px] text-[#736B5E]">Saving files to server storage and linking to product</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-[#EAE2D5] flex items-center justify-center text-[#0F4C5C]">
+                    <Upload className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#24211E]">
+                      Click to Upload Multiple Images
+                    </p>
+                    <p className="text-[11px] text-[#736B5E] mt-0.5">
+                      Select multiple PNG, JPG, or WEBP files. Stored on server storage & added to product database.
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => removeImage(idx)}
-                    className="absolute top-1 right-1 p-1 bg-black/60 text-white hover:bg-rose-600 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                    className="mt-1 px-4 py-1.5 bg-[#0F4C5C] text-white text-[11px] font-semibold uppercase tracking-wider shadow-xs hover:bg-[#0b3844] cursor-pointer"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    Select Images
                   </button>
                 </div>
-              ))}
+              )}
             </div>
 
-            <div className="flex gap-2">
-              <input
-                type="url"
-                placeholder="Add image URL (https://images.unsplash.com/...)"
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                className="flex-1 p-2 bg-[#FAF7F2] border border-[#D4C7B5] text-xs focus:outline-none focus:border-[#0F4C5C]"
-              />
-              <button
-                type="button"
-                onClick={addImage}
-                className="px-4 py-2 bg-[#24211E] text-white text-xs font-semibold uppercase tracking-wider"
-              >
-                Add Image
-              </button>
+            {/* Gallery Grid with Delete Functionality */}
+            {images.length > 0 && (
+              <div className="mb-4">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#8C6D37] block mb-2">
+                  Uploaded Product Images (Click trash icon to delete from storage)
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                  {images.map((img, idx) => (
+                    <div 
+                      key={idx} 
+                      className="relative aspect-[3/4] border border-[#D4C7B5] bg-[#F5EFE6] group overflow-hidden shadow-xs"
+                    >
+                      <img 
+                        src={img} 
+                        alt={`Product image ${idx + 1}`} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // fallback placeholder if local image link fails
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=400&q=70';
+                        }}
+                      />
+                      
+                      {/* Order Badge */}
+                      <span className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/70 text-[9px] text-white font-mono font-bold">
+                        #{idx + 1} {idx === 0 ? '(Cover)' : ''}
+                      </span>
+
+                      {/* Delete Image Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteUploadedImage(img, idx)}
+                        disabled={deletingImageUrl === img}
+                        title="Delete image from storage and product"
+                        className="absolute top-1 right-1 p-1.5 bg-rose-700/90 text-white hover:bg-rose-800 transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+                      >
+                        {deletingImageUrl === img ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Secondary Direct URL Option */}
+            <div className="pt-2 border-t border-[#E8DFD5]">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#736B5E] block mb-1">
+                Optional: Add via External Image URL
+              </span>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  placeholder="https://images.unsplash.com/photo-..."
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  className="flex-1 p-2 bg-[#FAF7F2] border border-[#D4C7B5] text-xs focus:outline-none focus:border-[#0F4C5C]"
+                />
+                <button
+                  type="button"
+                  onClick={addImage}
+                  className="px-4 py-2 bg-[#24211E] text-white text-xs font-semibold uppercase tracking-wider hover:bg-black cursor-pointer"
+                >
+                  Add URL
+                </button>
+              </div>
             </div>
           </div>
 
@@ -558,74 +737,7 @@ export const ProductEditor: React.FC<ProductEditorProps> = ({
         </div>
 
         {/* ================================================================= */}
-        {/* SECTION 5: SEO ENGINE */}
-        {/* ================================================================= */}
-        <div className="space-y-5">
-          <h3 className="font-serif text-lg font-bold text-[#24211E] flex items-center gap-2 border-b border-[#E8DFD5] pb-2">
-            <span className="w-5 h-5 rounded-full bg-[#0F4C5C] text-white text-xs flex items-center justify-center font-sans">5</span>
-            SEO Engine & Metadata
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5549] mb-1">URL Slug</label>
-              <input
-                type="text"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                placeholder="kavya-emerald-banarasi-tissue-saree"
-                className="w-full p-2 bg-[#FAF7F2] border border-[#D4C7B5] font-mono text-xs focus:outline-none focus:border-[#0F4C5C]"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5549] mb-1">Search Keywords (comma-separated)</label>
-              <input
-                type="text"
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
-                placeholder="Banarasi Saree, Pure Silk, AARU"
-                className="w-full p-2 bg-[#FAF7F2] border border-[#D4C7B5] text-xs focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5549] mb-1">Meta Title</label>
-            <input
-              type="text"
-              value={metaTitle}
-              onChange={(e) => setMetaTitle(e.target.value)}
-              className="w-full p-2 bg-[#FAF7F2] border border-[#D4C7B5] text-xs focus:outline-none focus:border-[#0F4C5C]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5C5549] mb-1">Meta Description</label>
-            <textarea
-              rows={2}
-              value={metaDescription}
-              onChange={(e) => setMetaDescription(e.target.value)}
-              className="w-full p-2 bg-[#FAF7F2] border border-[#D4C7B5] text-xs focus:outline-none focus:border-[#0F4C5C]"
-            />
-          </div>
-
-          {/* Live Google SERP Simulation Preview */}
-          <div className="p-4 bg-white border border-[#E8DFD5] space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C6D37] block mb-1">Live Google Search Preview</span>
-            <p className="text-xs text-blue-800 hover:underline font-medium cursor-pointer">
-              {metaTitle || `${title} | AARU Luxury Fashion`}
-            </p>
-            <p className="text-[11px] text-emerald-800 font-mono">
-              https://aaru.luxury/products/{slug || 'product-slug'}
-            </p>
-            <p className="text-xs text-[#5C5549] line-clamp-2">
-              {metaDescription || description}
-            </p>
-          </div>
-        </div>
-
-        {/* ================================================================= */}
-        {/* SECTION 6: FORM SUBMISSION */}
+        {/* SECTION 5: FORM SUBMISSION */}
         {/* ================================================================= */}
         <div className="pt-6 border-t border-[#E8DFD5] flex items-center justify-between">
           <button

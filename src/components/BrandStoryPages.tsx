@@ -370,7 +370,6 @@ export const Footer: React.FC<{
               <li><button type="button" onClick={handleOpenOrders} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Track Order Status</button></li>
               <li><button type="button" onClick={() => handleNav('shop-the-look')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Shop the Lookbook</button></li>
               <li><a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="hover:text-[#E8B4B8] transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5 text-emerald-400" /> WhatsApp Atelier Stylist</a></li>
-              <li><button type="button" onClick={handleSwitchAdmin} className="text-[#D4C7B5] hover:text-[#E8B4B8] font-medium cursor-pointer text-left">Atelier Admin Console</button></li>
             </ul>
           </div>
 
@@ -458,14 +457,7 @@ export const Footer: React.FC<{
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#A89882] font-light gap-4">
           <p>© 2026 AARU Luxury Fashion & Textiles Private Limited. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <span>Powered by React.js, Node.js & PostgreSQL</span>
-            <button
-              type="button"
-              onClick={handleSwitchAdmin}
-              className="text-[#FAF7F2] underline underline-offset-4 hover:text-[#E8B4B8] cursor-pointer transition-colors"
-            >
-              Switch to Admin Dashboard
-            </button>
+            <span>Handloom Heritage & Couture Excellence</span>
           </div>
         </div>
       </div>

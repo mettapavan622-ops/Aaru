@@ -236,5 +236,7 @@ export interface User {
   name: string;
   phone: string;
   role: 'customer' | 'admin';
-  addresses: Address[];
+  addresses?: Address[];
+  password?: string;
+  picture?: string;
 }

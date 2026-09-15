@@ -33,7 +33,8 @@ import {
   Check,
   ToggleLeft,
   ToggleRight,
-  Percent
+  Percent,
+  LogOut
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -48,6 +49,7 @@ interface AdminDashboardProps {
   onUpdateAnnouncement: (newSettings: Partial<AnnouncementSettings>) => Promise<void>;
   onUpdateOrderStatus: (orderId: string, status: Order['status'], trackingNumber?: string, courierName?: string) => Promise<void>;
   onSwitchToUser: () => void;
+  onSignOut?: () => void;
   onRefreshOrders?: () => Promise<void> | void;
   onRefreshCoupons?: () => Promise<void> | void;
 }
@@ -64,6 +66,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onUpdateAnnouncement,
   onUpdateOrderStatus,
   onSwitchToUser,
+  onSignOut,
   onRefreshOrders,
   onRefreshCoupons
 }) => {
@@ -376,37 +379,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   return (
     <div className="min-h-screen bg-[#F5EFE6] text-[#24211E]">
-      {/* Admin Operations Top Navigation Bar */}
-      <header className="sticky top-0 z-40 bg-[#24211E] text-[#FAF7F2] border-b border-[#3D3730] px-6 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      {/* Admin Operations Top Navigation Bar - Fixed flow with sticky positioning and explicit z-index */}
+      <header className="sticky top-0 z-30 w-full bg-[#24211E] text-[#FAF7F2] border-b border-[#3D3730] shadow-sm px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 min-h-[60px]">
+        <div className="flex items-center gap-3 shrink-0">
           <div className="flex items-baseline gap-2">
-            <span className="font-serif text-2xl font-bold tracking-[0.2em] text-[#FAF7F2]">
+            <span className="font-serif text-2xl font-bold tracking-[0.2em] text-[#FAF7F2] whitespace-nowrap">
               AARU
             </span>
-            <span className="text-[10px] font-sans uppercase tracking-[0.2em] px-2 py-0.5 bg-[#9C7C38] text-white font-bold">
+            <span className="text-[10px] font-sans uppercase tracking-[0.2em] px-2 py-0.5 bg-[#9C7C38] text-white font-bold whitespace-nowrap">
               Atelier CMS Engine
             </span>
           </div>
         </div>
 
-        {/* Presentation Switcher back to User Storefront */}
-        <div className="flex items-center gap-3">
+        {/* Presentation Switcher back to User Storefront & Session Sign Out */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap shrink-0">
           <button
             id="admin-return-storefront-btn"
             type="button"
             onClick={onSwitchToUser}
-            className="px-4 py-2 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-2 rounded-none transition-colors shadow-md cursor-pointer"
+            className="px-3.5 py-2 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-2 rounded-none transition-colors shadow-xs cursor-pointer whitespace-nowrap"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 shrink-0" />
             <span>Switch to User Storefront</span>
           </button>
+          {onSignOut && (
+            <button
+              id="admin-header-signout-btn"
+              type="button"
+              onClick={onSignOut}
+              className="px-3 py-2 bg-[#38332E] hover:bg-rose-900/60 border border-[#4D463F] text-rose-200 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 rounded-none transition-colors cursor-pointer whitespace-nowrap"
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span>Sign Out</span>
+            </button>
+          )}
         </div>
       </header>
 
-      {/* Main Admin Body */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Main Admin Body with clear vertical spacing and separation */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-16 space-y-8 relative z-10">
         {/* KPI Metric Blocks */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           <div className="bg-white border border-[#E8DFD5] p-5 shadow-xs">
             <p className="text-[10px] uppercase font-bold tracking-widest text-[#8C6D37]">Total Catalog Weaves</p>
             <p className="font-serif text-3xl font-bold text-[#0F4C5C] mt-1">{products.length}</p>
@@ -1971,7 +1985,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {activeTab === 'schema' && (
           <DatabaseSchemaViewer />
         )}
-      </div>
+      </main>
     </div>
   );
 };

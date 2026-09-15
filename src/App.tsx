@@ -47,8 +47,32 @@ import { AdminDashboard } from './components/admin/AdminDashboard';
 import { PolicyPage, PolicyType } from './components/PolicyPages';
 
 export default function App() {
+  // Authentication State: Loaded from verified session
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem('aaru_user_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isGuestBrowsing, setIsGuestBrowsing] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+
   // Top Level Navigation & Presentation Role Switcher
-  const [currentDashboard, setCurrentDashboard] = useState<'user' | 'admin'>('user');
+  const [currentDashboard, setCurrentDashboard] = useState<'user' | 'admin'>(() => {
+    try {
+      const saved = localStorage.getItem('aaru_user_session');
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u && (u.role === 'admin' || u.email?.toLowerCase() === 'aarubymoni@admin.co.in')) {
+          return 'admin';
+        }
+      }
+    } catch {}
+    return 'user';
+  });
   const [activeUserView, setActiveUserView] = useState<
     'home' | 'catalog' | 'pdp' | 'custom' | 'story' | 'about' | 'contact' | 'shop-the-look' | 'returns-policy' | 'shipping-policy' | 'privacy-policy' | 'terms-of-use'
   >(() => {
@@ -62,19 +86,40 @@ export default function App() {
     return 'home';
   });
 
-  // Sync browser back/forward history with policy views
+  // Sync browser back/forward history with policy views and admin route protection
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname.toLowerCase();
-      if (path.includes('returns-policy')) setActiveUserView('returns-policy');
+      if (path === '/admin') {
+        if (currentUser && currentUser.role === 'admin') {
+          setCurrentDashboard('admin');
+        } else {
+          setCurrentDashboard('user');
+          setActiveUserView('home');
+          window.history.replaceState(null, '', '/');
+        }
+      } else if (path.includes('returns-policy')) setActiveUserView('returns-policy');
       else if (path.includes('shipping-policy')) setActiveUserView('shipping-policy');
       else if (path.includes('privacy-policy')) setActiveUserView('privacy-policy');
       else if (path.includes('terms-of-use')) setActiveUserView('terms-of-use');
       else if (path === '/' || path === '') setActiveUserView('home');
     };
+
     window.addEventListener('popstate', handlePopState);
+
+    // Initial check on mount for direct /admin URL typing
+    if (typeof window !== 'undefined' && window.location.pathname.toLowerCase() === '/admin') {
+      if (currentUser && currentUser.role === 'admin') {
+        setCurrentDashboard('admin');
+      } else {
+        setCurrentDashboard('user');
+        setActiveUserView('home');
+        window.history.replaceState(null, '', '/');
+      }
+    }
+
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [currentUser]);
 
   const navigateToView = (view: typeof activeUserView) => {
     setActiveUserView(view);
@@ -98,19 +143,6 @@ export default function App() {
   const [announcement, setAnnouncement] = useState<AnnouncementSettings>(defaultAnnouncement);
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
   const [collections, setCollections] = useState<Collection[]>(defaultCollections);
-
-  // Authentication State: Displayed before the user logs into the website
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    try {
-      const saved = localStorage.getItem('aaru_user_session');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
-  const [isGuestBrowsing, setIsGuestBrowsing] = useState<boolean>(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
 
   // Bag, Checkout, Wishlist, Tracking Drawers/Modals
   const [cartItems, setCartItems] = useState<CartItem[]>([
@@ -460,9 +492,19 @@ export default function App() {
   const wishlistProducts = (products || []).filter(p => p && (wishlistProductIds || []).includes(p.id));
 
   // =========================================================================
-  // IF IN ADMIN DASHBOARD MODE:
+  // ROUTE PROTECTION & ADMIN DASHBOARD:
+  // Strictly enforce that only authenticated users with role === 'admin'
+  // can view the Admin Dashboard. Standard customers and unauthenticated users
+  // are immediately redirected to the Customer Storefront.
   // =========================================================================
   if (currentDashboard === 'admin') {
+    if (!currentUser || currentUser.role !== 'admin') {
+      // Route Protection: prevent unauthorized access
+      setCurrentDashboard('user');
+      setActiveUserView('home');
+      return null;
+    }
+
     return (
       <AdminDashboard
         products={products}
@@ -477,6 +519,14 @@ export default function App() {
         onUpdateAnnouncement={handleAdminUpdateAnnouncement}
         onUpdateOrderStatus={handleAdminUpdateOrderStatus}
         onSwitchToUser={() => setCurrentDashboard('user')}
+        onSignOut={() => {
+          localStorage.removeItem('aaru_user_session');
+          localStorage.removeItem('aaru_auth_token');
+          setCurrentUser(null);
+          setCurrentDashboard('user');
+          setActiveUserView('home');
+          setIsGuestBrowsing(false);
+        }}
         onRefreshOrders={handleRefreshOrders}
       />
     );
@@ -491,9 +541,14 @@ export default function App() {
       <AuthScreen
         onLoginSuccess={(user) => {
           setCurrentUser(user);
-          setActiveUserView('home');
-          if (user.role === 'admin') {
+          // Strict Role-Based Redirection:
+          // Admin credentials (aarubymoni@admin.co.in) -> Admin Dashboard
+          // Any other credentials -> Customer Storefront
+          if (user.role === 'admin' || user.email?.toLowerCase() === 'aarubymoni@admin.co.in') {
             setCurrentDashboard('admin');
+          } else {
+            setCurrentDashboard('user');
+            setActiveUserView('home');
           }
         }}
         onContinueAsGuest={() => {
@@ -532,6 +587,8 @@ export default function App() {
           localStorage.removeItem('aaru_user_session');
           localStorage.removeItem('aaru_auth_token');
           setCurrentUser(null);
+          setCurrentDashboard('user');
+          setActiveUserView('home');
           setIsGuestBrowsing(false);
         }}
         onSelectCategory={(categoryName) => {
@@ -921,8 +978,14 @@ export default function App() {
         onClose={() => setIsAuthModalOpen(false)}
         onLoginSuccess={(user) => {
           setCurrentUser(user);
-          if (user.role === 'admin') {
+          // Strict Role-Based Redirection:
+          // Admin credentials (aarubymoni@admin.co.in) -> Admin Dashboard
+          // Any other credentials -> Customer Storefront
+          if (user.role === 'admin' || user.email?.toLowerCase() === 'aarubymoni@admin.co.in') {
             setCurrentDashboard('admin');
+          } else {
+            setCurrentDashboard('user');
+            setActiveUserView('home');
           }
         }}
       />
