@@ -85,17 +85,23 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileCategoriesOpen, setIsMobileCategoriesOpen] = useState(false);
   const [isCategoriesMenuOpen, setIsCategoriesMenuOpen] = useState(false);
-  const [isCategoriesPinned, setIsCategoriesPinned] = useState(false);
+  const [isShopMoreOpen, setIsShopMoreOpen] = useState(false);
+  const [isMobileShopMoreOpen, setIsMobileShopMoreOpen] = useState(false);
+  const [mobileCategoryExpanded, setMobileCategoryExpanded] = useState<Record<string, boolean>>({});
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
+  const shopMenuRef = useRef<HTMLLIElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const categoriesMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Close account menu on outside click
+  // Close menus on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
         setIsAccountMenuOpen(false);
+      }
+      if (shopMenuRef.current && !shopMenuRef.current.contains(e.target as Node)) {
+        setIsShopMoreOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -250,31 +256,18 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Right Actions: Mobile Search, WhatsApp (sm+), Wishlist, Cart, Account */}
-        <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 shrink-0">
+        {/* Right Actions: Mobile Search, Wishlist, Cart, Account */}
+        <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 lg:gap-3 shrink-0">
           {/* Mobile Search Icon */}
           <button
             id="mobile-search-btn"
             type="button"
             aria-label="Open search modal"
             onClick={() => setIsSearchOpen(true)}
-            className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] md:hidden rounded-sm transition-colors"
+            className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] md:hidden rounded-sm transition-colors cursor-pointer"
           >
             <Search className="w-5 h-5" />
           </button>
-
-          {/* WhatsApp Direct Chat Hyperlink (Visible on sm+ screens; on small mobile, floating button is always present) */}
-          <a
-            id="header-whatsapp-link"
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Chat directly with AARU Atelier Stylist on WhatsApp"
-            className="p-1.5 sm:p-2 text-[#0F4C5C] hover:text-[#0b3844] relative hidden sm:flex items-center gap-1 transition-colors rounded-sm"
-          >
-            <MessageCircle className="w-5 h-5 text-[#0F4C5C]" />
-            <span className="hidden xl:inline text-xs font-medium text-[#0F4C5C]">WhatsApp Atelier</span>
-          </a>
 
           {/* Wishlist Icon */}
           <button
@@ -282,7 +275,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             aria-label={`Wishlist (${wishlistCount} items)`}
             onClick={onOpenWishlist}
-            className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] relative transition-colors rounded-sm"
+            className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] relative transition-colors rounded-sm cursor-pointer"
           >
             <Heart className="w-5 h-5" />
             {wishlistCount > 0 && (
@@ -298,7 +291,7 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             aria-label={`Shopping Cart (${cartCount} items)`}
             onClick={onOpenCart}
-            className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] relative flex items-center gap-1.5 transition-colors rounded-sm"
+            className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] relative flex items-center gap-1.5 transition-colors rounded-sm cursor-pointer"
           >
             <ShoppingBag className="w-5 h-5" />
             {cartCount > 0 && (
@@ -563,7 +556,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </li>
 
-            {/* Categories Showcase with Hover & Click Trigger (Fixed/Pinned on click) */}
+            {/* Categories Showcase with pure Hover Trigger (:hover / onMouseEnter) */}
             <li 
               className="relative"
               onMouseEnter={() => {
@@ -571,40 +564,33 @@ export const Header: React.FC<HeaderProps> = ({
                 setIsCategoriesMenuOpen(true);
               }}
               onMouseLeave={() => {
-                if (!isCategoriesPinned) {
-                  categoriesMenuTimeoutRef.current = setTimeout(() => {
-                    setIsCategoriesMenuOpen(false);
-                  }, 200);
-                }
+                categoriesMenuTimeoutRef.current = setTimeout(() => {
+                  setIsCategoriesMenuOpen(false);
+                }, 200);
               }}
             >
               <button
                 id="nav-link-categories"
                 type="button"
                 onClick={() => {
-                  if (categoriesMenuTimeoutRef.current) clearTimeout(categoriesMenuTimeoutRef.current);
-                  if (isCategoriesPinned) {
-                    setIsCategoriesPinned(false);
-                    setIsCategoriesMenuOpen(false);
-                  } else {
-                    setIsCategoriesPinned(true);
-                    setIsCategoriesMenuOpen(true);
-                  }
+                  setActiveTab('categories');
+                  setIsCategoriesMenuOpen(false);
                 }}
                 className={`relative py-1 flex items-center gap-1 transition-all cursor-pointer ${
                   isCategoriesMenuOpen || activeTab === 'categories' ? 'text-[#0F4C5C] font-semibold' : 'hover:text-[#0F4C5C]'
                 }`}
               >
                 <span>Categories</span>
-                {isCategoriesPinned && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#0F4C5C] inline-block" title="Pinned Open" />
-                )}
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isCategoriesMenuOpen ? 'rotate-180 text-[#0F4C5C]' : ''}`} />
                 {activeTab === 'categories' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0F4C5C] -mb-1" />}
               </button>
             </li>
 
-            <li>
+            {/* Shop Section with "More" Accordion Toggle */}
+            <li 
+              className="relative flex items-center gap-1"
+              ref={shopMenuRef}
+            >
               <button
                 id="nav-link-shop-the-look"
                 type="button"
@@ -613,9 +599,118 @@ export const Header: React.FC<HeaderProps> = ({
                   activeTab === 'shop-the-look' ? 'text-[#0F4C5C] font-semibold' : 'hover:text-[#0F4C5C]'
                 }`}
               >
-                Shop to Look
+                <span>Shop to Look</span>
                 {activeTab === 'shop-the-look' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0F4C5C] -mb-1" />}
               </button>
+
+              {/* 'More' Accordion Expansion Button near Shop Section */}
+              <button
+                id="header-shop-more-toggle"
+                type="button"
+                onClick={() => setIsShopMoreOpen(!isShopMoreOpen)}
+                className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-xs border transition-colors flex items-center gap-0.5 cursor-pointer ${
+                  isShopMoreOpen
+                    ? 'bg-[#0F4C5C] text-white border-[#0F4C5C]'
+                    : 'bg-white/80 text-[#8C6D37] border-[#D4C7B5] hover:border-[#0F4C5C] hover:text-[#0F4C5C]'
+                }`}
+                title="Expand more shop options"
+              >
+                <span>More</span>
+                <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-200 ${isShopMoreOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Accordion Dropdown Panel for Shop More */}
+              {isShopMoreOpen && (
+                <div 
+                  id="shop-more-dropdown-panel"
+                  className="absolute top-full left-0 mt-2 w-72 bg-white border border-[#D4C7B5] shadow-2xl z-50 p-4 animate-in fade-in slide-in-from-top-1 duration-150"
+                >
+                  <div className="flex items-center justify-between pb-2 border-b border-[#E8DFD5] mb-3">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[#8C6D37]">
+                      Shop Curated Selections
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsShopMoreOpen(false)}
+                      className="text-[10px] text-gray-400 hover:text-gray-700 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#0F4C5C] mb-1">
+                        By Fabric & Craft
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {['Pure Silk', 'Tissue Organza', 'Chanderi Brocade', 'Handloom Cotton'].map((fabric) => (
+                          <button
+                            key={fabric}
+                            type="button"
+                            onClick={() => {
+                              setIsShopMoreOpen(false);
+                              if (onSelectCategory) onSelectCategory(fabric);
+                            }}
+                            className="px-2 py-0.5 bg-[#FAF9F5] border border-[#E8DFD5] text-[10px] text-[#4A4339] hover:bg-[#0F4C5C] hover:text-white rounded-xs transition-colors"
+                          >
+                            {fabric}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#0F4C5C] mb-1">
+                        By Occasion
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {['Bridal Heirlooms', 'Cocktail & Sangeet', 'Festive Pooja', 'Everyday Drape'].map((occasion) => (
+                          <button
+                            key={occasion}
+                            type="button"
+                            onClick={() => {
+                              setIsShopMoreOpen(false);
+                              if (onSelectCategory) onSelectCategory(occasion);
+                            }}
+                            className="px-2 py-0.5 bg-[#FAF9F5] border border-[#E8DFD5] text-[10px] text-[#4A4339] hover:bg-[#0F4C5C] hover:text-white rounded-xs transition-colors"
+                          >
+                            {occasion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#0F4C5C] mb-1">
+                        Curated Edits
+                      </p>
+                      <div className="flex flex-col space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsShopMoreOpen(false);
+                            setActiveTab('sarees-rts');
+                          }}
+                          className="text-[11px] text-left text-[#5C5549] hover:text-[#0F4C5C] font-medium"
+                        >
+                          → Sarees Ready to Ship (24-Hour Dispatch)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsShopMoreOpen(false);
+                            setActiveTab('custom-clothing');
+                          }}
+                          className="text-[11px] text-left text-[#5C5549] hover:text-[#0F4C5C] font-medium"
+                        >
+                          → Bespoke Customised Clothing Studio
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </li>
 
             <li>
@@ -695,19 +790,24 @@ export const Header: React.FC<HeaderProps> = ({
           </ul>
         </div>
 
-        {/* Categories Mega Menu Dropdown */}
+        {/* Categories Mega Menu Dropdown (Controlled via pure hover) */}
         <CategoriesMegaMenu
           isOpen={isCategoriesMenuOpen}
-          isPinned={isCategoriesPinned}
-          onTogglePin={() => setIsCategoriesPinned(!isCategoriesPinned)}
+          onMouseEnter={() => {
+            if (categoriesMenuTimeoutRef.current) clearTimeout(categoriesMenuTimeoutRef.current);
+            setIsCategoriesMenuOpen(true);
+          }}
+          onMouseLeave={() => {
+            categoriesMenuTimeoutRef.current = setTimeout(() => {
+              setIsCategoriesMenuOpen(false);
+            }, 200);
+          }}
           onClose={() => {
-            setIsCategoriesPinned(false);
             setIsCategoriesMenuOpen(false);
           }}
           categories={categories}
           products={products}
           onSelectCategory={(catName) => {
-            setIsCategoriesPinned(false);
             setIsCategoriesMenuOpen(false);
             if (onSelectCategory) {
               onSelectCategory(catName);
@@ -716,12 +816,10 @@ export const Header: React.FC<HeaderProps> = ({
             }
           }}
           onSelectProduct={(prod) => {
-            setIsCategoriesPinned(false);
             setIsCategoriesMenuOpen(false);
             if (onSearchSelect) onSearchSelect(prod);
           }}
           onNavigateCustom={() => {
-            setIsCategoriesPinned(false);
             setIsCategoriesMenuOpen(false);
             setActiveTab('custom-clothing');
           }}
@@ -798,21 +896,65 @@ export const Header: React.FC<HeaderProps> = ({
                 <ArrowRight className="w-4 h-4 text-[#8A8175]" />
               </button>
 
-              {/* 2. Shop to Look */}
-              <button
-                id="mobile-nav-shop-the-look"
-                type="button"
-                onClick={() => {
-                  setActiveTab('shop-the-look');
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full min-h-[44px] px-3 py-2.5 text-left flex items-center justify-between border-b border-[#E8DFD5]/60 hover:bg-white transition-colors ${
-                  activeTab === 'shop-the-look' ? 'text-[#0F4C5C] bg-white font-bold border-l-3 border-[#0F4C5C]' : ''
-                }`}
-              >
-                <span>Shop to Look</span>
-                <ArrowRight className="w-4 h-4 text-[#8A8175]" />
-              </button>
+              {/* 2. Shop to Look with "More" Expansion Accordion */}
+              <div className="border-b border-[#E8DFD5]/60">
+                <div className="flex items-center justify-between pr-2">
+                  <button
+                    id="mobile-nav-shop-the-look"
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('shop-the-look');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`flex-1 min-h-[44px] px-3 py-2.5 text-left flex items-center justify-between hover:bg-white transition-colors ${
+                      activeTab === 'shop-the-look' ? 'text-[#0F4C5C] bg-white font-bold border-l-3 border-[#0F4C5C]' : ''
+                    }`}
+                  >
+                    <span>Shop to Look</span>
+                  </button>
+
+                  {/* 'More' Button near Shop */}
+                  <button
+                    type="button"
+                    id="mobile-shop-more-btn"
+                    onClick={() => setIsMobileShopMoreOpen(!isMobileShopMoreOpen)}
+                    className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xs border transition-colors flex items-center gap-1 cursor-pointer ${
+                      isMobileShopMoreOpen
+                        ? 'bg-[#0F4C5C] text-white border-[#0F4C5C]'
+                        : 'bg-white text-[#8C6D37] border-[#D4C7B5]'
+                    }`}
+                  >
+                    <span>More</span>
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isMobileShopMoreOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+
+                {/* Mobile Shop More Accordion Sub-options */}
+                {isMobileShopMoreOpen && (
+                  <div className="bg-white px-3 py-2 border-t border-[#E8DFD5] space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#8C6D37]">
+                      Explore Shop Options
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['Pure Silk Sarees', 'Tissue Organza', 'Bridal Lehengas', 'Ready to Ship', 'Custom Tailoring'].map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => {
+                            if (opt === 'Ready to Ship') setActiveTab('sarees-rts');
+                            else if (opt === 'Custom Tailoring') setActiveTab('custom-clothing');
+                            else if (onSelectCategory) onSelectCategory(opt);
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="px-2 py-1 bg-[#FAF9F5] border border-[#D4C7B5] text-[10px] text-[#24211E] rounded-xs hover:bg-[#0F4C5C] hover:text-white"
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* 3. Categories with Expandable Subcategories Accordion */}
               <div className="border-b border-[#E8DFD5]/60">
@@ -832,35 +974,79 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
 
                 {isMobileCategoriesOpen && (
-                  <div id="mobile-categories-accordion" className="bg-white/90 border-t border-[#E8DFD5] pl-3 pr-1 py-1 divide-y divide-[#FAF7F2] max-h-60 overflow-y-auto">
-                    {categories.map((cat) => (
-                      <button
-                        key={cat.id}
-                        id={`mobile-cat-${cat.slug}`}
-                        type="button"
-                        onClick={() => {
-                          if (cat.name === 'Customized Clothing') {
-                            setActiveTab('custom-clothing');
-                          } else if (onSelectCategory) {
-                            onSelectCategory(cat.name);
-                          } else {
-                            setActiveTab(cat.name);
-                          }
-                          setIsMobileMenuOpen(false);
-                        }}
-                        className="w-full min-h-[44px] px-2 py-2 text-left flex items-center justify-between text-[11px] font-medium text-[#4A4339] hover:text-[#0F4C5C] hover:bg-white transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <img 
-                            src={cat.image} 
-                            alt={cat.name} 
-                            className="w-6 h-6 object-cover border border-[#E8DFD5] bg-[#FAF7F2]" 
-                          />
-                          <span>{cat.name}</span>
+                  <div id="mobile-categories-accordion" className="bg-white/90 border-t border-[#E8DFD5] pl-3 pr-2 py-1 divide-y divide-[#FAF7F2] max-h-72 overflow-y-auto">
+                    {categories.map((cat) => {
+                      const isCatExpanded = !!mobileCategoryExpanded[cat.id || cat.name];
+
+                      return (
+                        <div key={cat.id} className="py-1">
+                          <div className="flex items-center justify-between">
+                            <button
+                              id={`mobile-cat-${cat.slug}`}
+                              type="button"
+                              onClick={() => {
+                                if (cat.name === 'Customized Clothing') {
+                                  setActiveTab('custom-clothing');
+                                } else if (onSelectCategory) {
+                                  onSelectCategory(cat.name);
+                                } else {
+                                  setActiveTab(cat.name);
+                                }
+                                setIsMobileMenuOpen(false);
+                              }}
+                              className="flex-1 min-h-[40px] px-2 py-1 text-left flex items-center gap-2.5 text-[11px] font-medium text-[#4A4339] hover:text-[#0F4C5C]"
+                            >
+                              <img 
+                                src={cat.image} 
+                                alt={cat.name} 
+                                className="w-6 h-6 object-cover border border-[#E8DFD5] bg-[#FAF7F2]" 
+                              />
+                              <span>{cat.name}</span>
+                            </button>
+
+                            {/* 'More' Button for Each Category in Mobile Menu */}
+                            <button
+                              type="button"
+                              id={`mobile-cat-more-${cat.slug || cat.id}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMobileCategoryExpanded(prev => ({
+                                  ...prev,
+                                  [cat.id || cat.name]: !prev[cat.id || cat.name]
+                                }));
+                              }}
+                              className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-xs border transition-colors flex items-center gap-0.5 cursor-pointer ${
+                                isCatExpanded
+                                  ? 'bg-[#0F4C5C] text-white border-[#0F4C5C]'
+                                  : 'bg-white text-[#8C6D37] border-[#D4C7B5]'
+                              }`}
+                            >
+                              <span>More</span>
+                              <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-200 ${isCatExpanded ? 'rotate-180' : ''}`} />
+                            </button>
+                          </div>
+
+                          {/* Expanded sub-options for this category in mobile */}
+                          {isCatExpanded && (
+                            <div className="pl-8 pr-2 py-1.5 bg-[#FAF9F5] border-t border-[#E8DFD5]/60 flex flex-wrap gap-1">
+                              {['Handloom Silk', 'Zari Border', 'Festive Edit', 'Artisanal Loom'].map((subTag) => (
+                                <button
+                                  key={subTag}
+                                  type="button"
+                                  onClick={() => {
+                                    if (onSelectCategory) onSelectCategory(`${cat.name} ${subTag}`);
+                                    setIsMobileMenuOpen(false);
+                                  }}
+                                  className="px-2 py-0.5 bg-white border border-[#D4C7B5] text-[9px] text-[#4A4339] rounded-xs"
+                                >
+                                  {subTag}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-[#8A8175]" />
-                      </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -100,6 +100,38 @@ export type OrderStatus =
   | 'Exchange Approved'
   | 'Return Rejected';
 
+export type ReturnTrackingStepStatus = 
+  | 'Return Requested' 
+  | 'Return Approved' 
+  | 'Out for Pickup' 
+  | 'Package Received' 
+  | 'Refund Processed';
+
+export interface ReturnTrackingStep {
+  step: ReturnTrackingStepStatus;
+  label: string;
+  date?: string;
+  completed: boolean;
+  current?: boolean;
+  description?: string;
+}
+
+export interface ReturnTrackingData {
+  orderId: string;
+  orderNumber: string;
+  returnRequestId: string;
+  requestType: 'Return' | 'Exchange';
+  currentStatus: ReturnTrackingStepStatus;
+  pickupScheduledDate?: string;
+  reverseCourier: string;
+  reverseTrackingNumber: string;
+  refundAmount?: number;
+  refundMethod?: string;
+  refundReferenceId?: string;
+  steps: ReturnTrackingStep[];
+  updatedAt?: string;
+}
+
 export interface ReturnExchangeRequest {
   id: string;
   orderId: string;
@@ -111,6 +143,11 @@ export interface ReturnExchangeRequest {
   reason: string;
   clientNote: string;
   status: 'Pending' | 'Approved' | 'Cancelled' | 'Rejected';
+  trackingStatus?: ReturnTrackingStepStatus;
+  reverseCourier?: string;
+  reverseTrackingNumber?: string;
+  refundAmount?: number;
+  refundReferenceId?: string;
   adminNote?: string;
   exchangeSize?: string;
   pickupScheduledDate?: string;

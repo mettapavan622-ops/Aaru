@@ -560,6 +560,84 @@ export const INITIAL_PRODUCTS: Product[] = [
 
 export const INITIAL_ORDERS: Order[] = [
   {
+    id: 'ord-89420',
+    orderNumber: 'AARU-2026-89420',
+    userId: 'user-demo-1',
+    customerName: 'Anantha Rao',
+    customerEmail: 'anantharao2018@gmail.com',
+    customerPhone: '+91 98451 23098',
+    items: [
+      {
+        product: INITIAL_PRODUCTS[1],
+        variant: INITIAL_PRODUCTS[1].variants[0],
+        quantity: 1,
+        price: 26800
+      }
+    ],
+    shippingAddress: {
+      id: 'addr-1',
+      name: 'Anantha Rao',
+      street: '74 Lavelle Road, Richmond Town',
+      apartment: 'Suite 402, Crescent Manor',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      pincode: '560001',
+      phone: '+91 98451 23098',
+      isDefault: true
+    },
+    subtotal: 26800,
+    discount: 0,
+    shippingFee: 0,
+    tax: 1206,
+    total: 28006,
+    status: 'Return Approved',
+    paymentMethod: 'UPI / Net Banking',
+    paymentId: 'pay_test_881230491',
+    courierName: 'Blue Dart Luxury Express',
+    trackingNumber: 'BD-771239841IN',
+    timeline: [
+      { status: 'Confirmed', label: 'Order Confirmed', date: '04 Sep 2026, 10:15 AM', completed: true },
+      { status: 'Processing', label: 'Atelier Inspection & Packing', date: '05 Sep 2026, 02:30 PM', completed: true },
+      { status: 'Shipped', label: 'Dispatched via Blue Dart', date: '06 Sep 2026, 09:00 AM', completed: true },
+      { status: 'Delivered', label: 'Delivered to Recipient', date: '08 Sep 2026, 04:20 PM', completed: true },
+      { status: 'Return Requested', label: 'Return Request Submitted', date: '11 Sep 2026, 11:30 AM', completed: true },
+      { status: 'Return Approved', label: 'Return Approved by Atelier Admin', date: '12 Sep 2026, 03:00 PM', completed: true, current: true, description: 'Return authorized by Atelier Director Moni. Reverse pickup scheduled with Blue Dart Luxury Express.' }
+    ],
+    canCancel: false,
+    canReturn: false,
+    returnRequest: {
+      id: 'ret-seed-89420',
+      orderId: 'ord-89420',
+      orderNumber: 'AARU-2026-89420',
+      customerName: 'Anantha Rao',
+      customerEmail: 'anantharao2018@gmail.com',
+      customerPhone: '+91 98451 23098',
+      requestType: 'Return',
+      reason: 'Sizing or Fit Issue (Blouse fit too snug at bust)',
+      clientNote: 'Exquisite silk weave and craftsmanship, requesting reverse pickup for return.',
+      status: 'Approved',
+      trackingStatus: 'Out for Pickup',
+      pickupScheduledDate: 'Tomorrow, 11:00 AM - 02:00 PM',
+      reverseCourier: 'Blue Dart Luxury Express - Reverse Logistics',
+      reverseTrackingNumber: 'BD-REV-89420IN',
+      refundAmount: 28006,
+      refundReferenceId: 'REF-89420-UTR',
+      adminNote: 'Return authorized by Atelier Director Moni. Blue Dart reverse collection booked.',
+      createdAt: '2026-09-11T11:30:00Z',
+      updatedAt: '2026-09-12T15:00:00Z',
+      items: [
+        {
+          productTitle: 'Noor Pale Rose Organza Saree',
+          size: 'Free Size',
+          quantity: 1,
+          price: 26800,
+          image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=1000&q=85'
+        }
+      ]
+    },
+    createdAt: '2026-09-04T10:15:00Z'
+  },
+  {
     id: 'ord-89421',
     orderNumber: 'AARU-2026-89421',
     userId: 'user-demo-1',

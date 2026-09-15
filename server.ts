@@ -67,7 +67,7 @@ let products: Product[] = [...INITIAL_PRODUCTS];
 let orders: Order[] = [...INITIAL_ORDERS];
 let announcement: AnnouncementSettings = { ...INITIAL_ANNOUNCEMENT };
 let customRequests: CustomClothingRequest[] = [];
-let returnRequests: ReturnExchangeRequest[] = [];
+let returnRequests: ReturnExchangeRequest[] = INITIAL_ORDERS.filter(o => o.returnRequest).map(o => o.returnRequest!);
 let coupons: PromoCode[] = [...INITIAL_COUPONS];
 let inquiries: CustomerInquiry[] = [
   {
@@ -1320,6 +1320,7 @@ async function startServer() {
     }
 
     request.status = 'Approved';
+    request.trackingStatus = 'Return Approved';
     request.adminNote = adminNote || (request.requestType === 'Exchange' 
       ? 'Exchange approved. Replacement weave is being prepared for dispatch.' 
       : 'Return approved. Reverse pickup scheduled via Blue Dart Express.');
@@ -1329,6 +1330,11 @@ async function startServer() {
     // Also update order status
     const order = orders.find(o => o.id === request.orderId);
     if (order) {
+      request.reverseCourier = 'Blue Dart Luxury Express - Reverse Logistics';
+      request.reverseTrackingNumber = `BD-REV-${order.orderNumber.replace(/[^0-9]/g, '') || Math.floor(100000 + Math.random() * 900000)}IN`;
+      request.refundAmount = order.total;
+      request.refundReferenceId = `REF-${order.orderNumber.replace(/[^0-9]/g, '') || '894210'}`;
+
       order.status = request.requestType === 'Exchange' ? 'Exchange Approved' : 'Return Approved';
       order.returnRequest = request;
       order.timeline.push({
@@ -1338,6 +1344,124 @@ async function startServer() {
         completed: true,
         current: true,
         description: `${request.adminNote} • Scheduled pickup: ${request.pickupScheduledDate}`
+      });
+    }
+
+    res.json({ success: true, returnRequest: request, order });
+  });
+
+  // Get Detailed Return Tracking Dossier for an Order (User Dashboard / Orders Page)
+  app.get('/api/orders/:id/return-tracking', (req: Request, res: Response) => {
+    const { id } = req.params;
+    const order = orders.find(o => o.id === id || o.orderNumber === id);
+
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const request = order.returnRequest || returnRequests.find(r => r.orderId === order.id);
+
+    if (!request) {
+      return res.status(404).json({ error: 'No return or exchange request found for this order.' });
+    }
+
+    const currentStatus: ReturnTrackingStepStatus = request.trackingStatus || (request.status === 'Approved' ? 'Return Approved' : 'Return Requested');
+    const pickupDate = request.pickupScheduledDate || 'Tomorrow, 11:00 AM - 02:00 PM';
+    const reverseWaybill = request.reverseTrackingNumber || `BD-REV-${order.orderNumber.replace(/[^0-9]/g, '') || '894210'}IN`;
+    const refundAmount = request.refundAmount || order.total;
+
+    const stages: ReturnTrackingStepStatus[] = [
+      'Return Approved',
+      'Out for Pickup',
+      'Package Received',
+      'Refund Processed'
+    ];
+
+    const currentIdx = stages.indexOf(currentStatus);
+
+    const steps = [
+      {
+        step: 'Return Approved',
+        label: 'Return Approved',
+        completed: currentIdx >= 0 || request.status === 'Approved',
+        current: currentIdx === 0,
+        date: request.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'Authorized',
+        description: 'Return request verified & authorized by Atelier Director Moni. Reverse pickup generated.'
+      },
+      {
+        step: 'Out for Pickup',
+        label: 'Out for Pickup',
+        completed: currentIdx >= 1,
+        current: currentIdx === 1,
+        date: currentIdx >= 1 ? 'In Progress' : pickupDate,
+        description: `Blue Dart reverse courier agent assigned. Scheduled collection: ${pickupDate}.`
+      },
+      {
+        step: 'Package Received',
+        label: 'Inspection at Atelier Loom',
+        completed: currentIdx >= 2,
+        current: currentIdx === 2,
+        date: currentIdx >= 2 ? 'Passed' : 'Upcoming',
+        description: 'Artisanal inspection of saree zari, fall, and tags at Varanasi weaving center.'
+      },
+      {
+        step: 'Refund Processed',
+        label: 'Refund Processed',
+        completed: currentIdx >= 3,
+        current: currentIdx === 3,
+        date: currentIdx >= 3 ? 'Completed' : 'Pending Inspection',
+        description: `₹${refundAmount.toLocaleString('en-IN')} credited back to original payment instrument (Ref: ${request.refundReferenceId || `REF-${order.orderNumber.replace(/[^0-9]/g, '') || '9281'}`}).`
+      }
+    ];
+
+    res.json({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      returnRequestId: request.id,
+      requestType: request.requestType,
+      currentStatus,
+      pickupScheduledDate: pickupDate,
+      reverseCourier: request.reverseCourier || 'Blue Dart Luxury Express - Reverse Logistics',
+      reverseTrackingNumber: reverseWaybill,
+      refundAmount,
+      refundMethod: 'Original Payment Method (Direct Bank / UPI)',
+      refundReferenceId: request.refundReferenceId || `REF-${order.orderNumber.replace(/[^0-9]/g, '') || '894210'}`,
+      steps,
+      updatedAt: request.updatedAt || request.createdAt
+    });
+  });
+
+  // Advance / Update Return Tracking Step (Telemetry / Admin)
+  app.post('/api/return-requests/:id/tracking-status', (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { trackingStatus, adminNote } = req.body;
+    const request = returnRequests.find(r => r.id === id);
+
+    if (!request) {
+      return res.status(404).json({ error: 'Return request not found' });
+    }
+
+    request.trackingStatus = trackingStatus;
+    request.status = 'Approved';
+    request.updatedAt = new Date().toISOString();
+    if (adminNote) request.adminNote = adminNote;
+
+    const order = orders.find(o => o.id === request.orderId);
+    if (order) {
+      order.returnRequest = request;
+      if (trackingStatus === 'Refund Processed') {
+        order.status = 'Returned';
+      } else {
+        order.status = request.requestType === 'Exchange' ? 'Exchange Approved' : 'Return Approved';
+      }
+
+      order.timeline.push({
+        status: trackingStatus,
+        label: `Return Milestone: ${trackingStatus}`,
+        date: new Date().toLocaleString(),
+        completed: true,
+        current: true,
+        description: adminNote || `Reverse courier status transitioned to ${trackingStatus}.`
       });
     }
 

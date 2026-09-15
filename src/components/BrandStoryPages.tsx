@@ -329,25 +329,25 @@ export const Footer: React.FC<{
   return (
     <footer className="bg-[#121212] text-[#FAF7F2] border-t border-[#262626] pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-[#262626]">
-          {/* Col 1: Brand & Manifesto */}
-          <div className="lg:col-span-1 space-y-4">
-            <AaruLogo size="lg" variant="dark" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 pb-12 border-b border-[#262626]">
+          {/* Col 1: Brand & Manifesto - Generous 4 cols on desktop */}
+          <div className="sm:col-span-2 lg:col-span-4 space-y-4 pr-0 lg:pr-4">
+            <AaruLogo size="md" variant="dark" />
             <p className="text-xs text-[#C4B7A5] font-light leading-relaxed max-w-sm">
               A luxury women’s fashion and textile house. Designed around the sixth element — intuition, softness, power, confidence, strength, and protection.
             </p>
-            <div className="pt-2 flex flex-col gap-2">
-              <span className="inline-block px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider bg-[#FAF7F2]/10 text-[#FAF7F2] border border-[#FAF7F2]/20 w-fit">
+            <div className="pt-2 flex flex-wrap gap-2">
+              <span className="inline-block px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider bg-[#FAF7F2]/10 text-[#FAF7F2] border border-[#FAF7F2]/20">
                 100% Silk Mark Certified
               </span>
-              <span className="inline-block px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider bg-[#FAF7F2]/10 text-[#FAF7F2] border border-[#FAF7F2]/20 w-fit">
+              <span className="inline-block px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider bg-[#FAF7F2]/10 text-[#FAF7F2] border border-[#FAF7F2]/20">
                 Direct Loom Origin
               </span>
             </div>
           </div>
 
-          {/* Col 2: The Collections */}
-          <div className="space-y-3">
+          {/* Col 2: The Collections - 2 cols */}
+          <div className="lg:col-span-2 space-y-3">
             <h4 className="font-serif text-sm font-bold tracking-wider text-[#FAF7F2] uppercase">
               The Collections
             </h4>
@@ -360,8 +360,8 @@ export const Footer: React.FC<{
             </ul>
           </div>
 
-          {/* Col 3: Client Atelier & Services */}
-          <div className="space-y-3">
+          {/* Col 3: Client Atelier & Services - 2 cols */}
+          <div className="lg:col-span-2 space-y-3">
             <h4 className="font-serif text-sm font-bold tracking-wider text-[#FAF7F2] uppercase">
               Atelier Services
             </h4>
@@ -373,8 +373,8 @@ export const Footer: React.FC<{
             </ul>
           </div>
 
-          {/* Col 4: CUSTOMER CARE (Heading white, values hover muted rose/pink) */}
-          <div className="space-y-3">
+          {/* Col 4: CUSTOMER CARE - 2 cols */}
+          <div className="lg:col-span-2 space-y-3">
             <h4 className="font-serif text-sm font-bold tracking-wider text-[#FAF7F2] uppercase">
               CUSTOMER CARE
             </h4>
@@ -434,8 +434,8 @@ export const Footer: React.FC<{
             </ul>
           </div>
 
-          {/* Col 5: Brand & Heritage */}
-          <div className="space-y-3">
+          {/* Col 5: Brand & Heritage - 2 cols */}
+          <div className="lg:col-span-2 space-y-3">
             <h4 className="font-serif text-sm font-bold tracking-wider text-[#FAF7F2] uppercase">
               Brand & Heritage
             </h4>

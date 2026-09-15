@@ -604,52 +604,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // Rapid Evaluation Presets (One-Click Testing for Patron & Admin)
-  // ---------------------------------------------------------------------------
-  const handleQuickLogin = async (role: 'patron' | 'admin') => {
-    const email = role === 'patron' ? 'anantharao2018@gmail.com' : 'aarubymoni@admin.co.in';
-    const password = role === 'patron' ? 'password123' : 'aarubymoni@1';
-
-    setSignInEmail(email);
-    setSignInPassword(password);
-    setScreenMode('login');
-
-    setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Quick evaluation sign-in failed.');
-      }
-
-      const authenticatedUser: User = {
-        ...data.user,
-        role: role === 'admin' ? 'admin' : (data.user.role || 'customer')
-      };
-
-      localStorage.setItem('aaru_user_session', JSON.stringify(authenticatedUser));
-      if (data.token) {
-        localStorage.setItem('aaru_auth_token', data.token);
-      }
-
-      setSuccessToast(`Signed in as ${authenticatedUser.name} (${role === 'admin' ? 'Atelier Director' : 'Patron'})`);
-      setTimeout(() => {
-        onLoginSuccess(authenticatedUser);
-        if (onClose) onClose();
-      }, 300);
-    } catch (err: any) {
-      setErrorMessage(err.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div 
       id="aaru-auth-portal"
@@ -1566,50 +1520,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           </div>
         )}
 
-        {/* ===================================================================== */}
-        {/* Quick Evaluation Presets & Guest Exploration */}
-        {/* ===================================================================== */}
-        <div className="mt-8 pt-5 border-t border-[#E8DFD5] space-y-3">
-          {/* Continue as Guest Button */}
-          {onContinueAsGuest && (
-            <div className="text-center">
-              <button
-                type="button"
-                id="continue-as-guest-btn"
-                onClick={onContinueAsGuest}
-                className="text-xs font-semibold text-[#0F4C5C] hover:text-[#0b3844] hover:underline cursor-pointer uppercase tracking-wider inline-flex items-center gap-1"
-              >
-                <span>Explore Atelier as Guest</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {/* Quick-fill 1-Click Evaluation Presets (Email + Password test accounts) */}
-          <div className="bg-[#FAF9F5] p-2.5 border border-[#E8DFD5] text-center">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-[#8C6D37] block mb-1.5">
-              Rapid Evaluation Credentials (Instant Sign In)
-            </span>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <button
-                type="button"
-                id="quick-login-patron-btn"
-                onClick={() => handleQuickLogin('patron')}
-                className="px-2.5 py-1 bg-white border border-[#D4C7B5] text-[10px] font-medium text-[#24211E] hover:border-[#0F4C5C] transition-colors cursor-pointer"
-              >
-                👤 Sign In as Patron (Anantha Rao)
-              </button>
-              <button
-                type="button"
-                id="quick-login-admin-btn"
-                onClick={() => handleQuickLogin('admin')}
-                className="px-2.5 py-1 bg-white border border-[#D4C7B5] text-[10px] font-medium text-[#24211E] hover:border-[#0F4C5C] transition-colors cursor-pointer"
-              >
-                👑 Sign In as Director (Admin)
-              </button>
-            </div>
+        {/* Guest Exploration Option */}
+        {onContinueAsGuest && (
+          <div className="mt-8 pt-5 border-t border-[#E8DFD5] text-center">
+            <button
+              type="button"
+              id="continue-as-guest-btn"
+              onClick={onContinueAsGuest}
+              className="text-xs font-semibold text-[#0F4C5C] hover:text-[#0b3844] hover:underline cursor-pointer uppercase tracking-wider inline-flex items-center gap-1"
+            >
+              <span>Explore Atelier as Guest</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

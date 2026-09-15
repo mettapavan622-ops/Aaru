@@ -222,11 +222,11 @@ export const AaruLogo: React.FC<AaruLogoProps> = ({
   };
 
   const subtitleClasses: Record<string, string> = {
-    sm: "text-[8px] tracking-[0.22em]",
-    md: "text-[9px] sm:text-[10px] tracking-[0.26em]",
-    lg: "text-[10px] sm:text-[11px] tracking-[0.3em]",
-    xl: "text-[12px] tracking-[0.32em]",
-    responsive: "hidden sm:block text-[8px] sm:text-[9px] md:text-[10px] tracking-[0.18em] sm:tracking-[0.26em]"
+    sm: "text-[8px] tracking-[0.18em]",
+    md: "text-[9px] sm:text-[10px] tracking-[0.20em] sm:tracking-[0.24em]",
+    lg: "text-[10px] sm:text-[11px] tracking-[0.20em] sm:tracking-[0.24em]",
+    xl: "text-[12px] tracking-[0.26em]",
+    responsive: "hidden sm:block text-[8px] sm:text-[9px] md:text-[10px] tracking-[0.16em] sm:tracking-[0.22em]"
   };
 
   return (
@@ -250,9 +250,9 @@ export const AaruLogo: React.FC<AaruLogoProps> = ({
         </div>
         
         {showSubtitle && (
-          <span className={`font-sans uppercase font-semibold mt-0.5 ${subtitleClasses[size]} ${
+          <span className={`font-sans uppercase font-semibold mt-0.5 max-w-full truncate ${subtitleClasses[size]} ${
             isDark ? 'text-[#D4C7B5]' : 'text-[#8C6D37]'
-          } whitespace-nowrap`}>
+          }`}>
             A Woman’s Sixth Element
           </span>
         )}
