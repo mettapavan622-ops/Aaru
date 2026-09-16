@@ -116,7 +116,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     } catch (e) {
       console.warn('Could not fetch razorpay key from server:', e);
     }
-    return 'rzp_live_TaprqEC6ceGPl9';
+    return '';
   };
 
   // Direct Sandbox Test Payment Helper

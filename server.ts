@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
-dotenv.config({ override: true });
+// Load .env without overriding environment secrets injected by the container platform
+dotenv.config();
 import express, { Request, Response } from 'express';
 import path from 'path';
 import crypto from 'crypto';
@@ -11,8 +12,8 @@ import { INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_ANNOUNCEMENT, CATEGORIES, COL
 import { Product, Order, CustomClothingRequest, AnnouncementSettings, CustomerInquiry, ReturnExchangeRequest, PromoCode, ReturnTrackingStepStatus } from './src/types';
 
 // Razorpay Payment Gateway Configuration
-const RAZORPAY_KEY_ID = (process.env.RAZORPAY_KEY_ID || 'rzp_live_TaprqEC6ceGPl9').trim();
-const RAZORPAY_KEY_SECRET = (process.env.RAZORPAY_KEY_SECRET || '0buTrGNsGEoeQ7Abg8EF3WC0').trim();
+const RAZORPAY_KEY_ID = (process.env.RAZORPAY_KEY_ID || '').trim();
+const RAZORPAY_KEY_SECRET = (process.env.RAZORPAY_KEY_SECRET || '').trim();
 
 // Local Media File Storage & Uploads Setup
 const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
@@ -246,8 +247,18 @@ async function sendBrevoOtpEmail({
   otpCode: string;
   purpose: 'signup' | 'forgot-password';
 }): Promise<{ success: boolean; simulated?: boolean; message?: string }> {
-  const apiKey = (process.env.BREVO_API_KEY || '').trim();
-  const senderEmail = (process.env.BREVO_SENDER_EMAIL || 'concierge@aaru.luxury').trim();
+  const envApiKey = (process.env.BREVO_API_KEY || '').trim();
+  // Filter out dummy placeholder strings so real keys or system secrets are used
+  const apiKey = (envApiKey && !envApiKey.includes('your_test_brevo') && !envApiKey.includes('placeholder')) 
+    ? envApiKey 
+    : '';
+
+  const envSender = (process.env.BREVO_SENDER_EMAIL || '').trim();
+  // Brevo requires a verified sender email in your Brevo account (e.g., account email or verified domain)
+  const senderEmail = (envSender && !envSender.includes('placeholder'))
+    ? envSender
+    : 'mettapavan622@gmail.com';
+
   const senderName = (process.env.BREVO_SENDER_NAME || 'AARU Luxury Atelier').trim();
 
   const purposeTitle = purpose === 'signup' 
@@ -1831,9 +1842,17 @@ async function startServer() {
         purpose: 'signup'
       });
 
+      if (!emailResult.success) {
+        return res.status(502).json({
+          error: emailResult.message || 'Failed to dispatch email via Brevo. Please check your Brevo sender configuration.'
+        });
+      }
+
       res.json({
         success: true,
-        message: `6-digit verification code dispatched to ${cleanEmail}.`,
+        message: emailResult.simulated 
+          ? `Sandbox mode: OTP code generated.` 
+          : `6-digit verification code dispatched to ${cleanEmail}.`,
         email: cleanEmail,
         demoOtp: emailResult.simulated ? generatedOtp : undefined
       });
@@ -2048,9 +2067,17 @@ async function startServer() {
         purpose: 'forgot-password'
       });
 
+      if (!emailResult.success) {
+        return res.status(502).json({
+          error: emailResult.message || 'Failed to dispatch email via Brevo. Please check your Brevo sender configuration.'
+        });
+      }
+
       res.json({
         success: true,
-        message: `A 6-digit recovery code has been dispatched to ${normalizedEmail}.`,
+        message: emailResult.simulated 
+          ? `Sandbox mode: OTP code generated.` 
+          : `A 6-digit recovery code has been dispatched to ${normalizedEmail}.`,
         email: normalizedEmail,
         demoOtp: emailResult.simulated ? generatedOtp : undefined
       });
@@ -2182,9 +2209,17 @@ async function startServer() {
           purpose: 'signup'
         });
 
+        if (!emailResult.success) {
+          return res.status(502).json({
+            error: emailResult.message || 'Failed to dispatch email via Brevo. Please check your Brevo sender configuration.'
+          });
+        }
+
         return res.json({
           success: true,
-          message: `New verification code dispatched to ${normalizedEmail}.`,
+          message: emailResult.simulated 
+            ? `Sandbox mode: New verification code generated.`
+            : `New verification code dispatched to ${normalizedEmail}.`,
           demoOtp: emailResult.simulated ? generatedOtp : undefined
         });
       } else {
@@ -2210,9 +2245,17 @@ async function startServer() {
           purpose: 'forgot-password'
         });
 
+        if (!emailResult.success) {
+          return res.status(502).json({
+            error: emailResult.message || 'Failed to dispatch email via Brevo. Please check your Brevo sender configuration.'
+          });
+        }
+
         return res.json({
           success: true,
-          message: `New recovery code dispatched to ${normalizedEmail} via Brevo.`,
+          message: emailResult.simulated 
+            ? `Sandbox mode: New recovery code generated.`
+            : `New recovery code dispatched to ${normalizedEmail} via Brevo.`,
           demoOtp: emailResult.simulated ? generatedOtp : undefined
         });
       }
@@ -2237,7 +2280,15 @@ async function startServer() {
   // ---------------------------------------------------------------------------
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        allowedHosts: [
+          'aaru-a-woman-s-sixth-element.ai.studio',
+          '.ai.studio',
+          'localhost',
+          '127.0.0.1'
+        ]
+      },
       appType: 'spa'
     });
     app.use(vite.middlewares);
