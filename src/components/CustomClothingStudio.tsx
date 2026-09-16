@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Scissors, CheckCircle, MessageCircle, Ruler, Send } from 'lucide-react';
+import { Sparkles, Scissors, CheckCircle, MessageCircle, Ruler, Send, Palette, Pipette, Check } from 'lucide-react';
 import { CustomClothingRequest } from '../types';
 
 export const CustomClothingStudio: React.FC = () => {
@@ -9,7 +9,7 @@ export const CustomClothingStudio: React.FC = () => {
     customerEmail: '',
     garmentType: 'Saree & Blouse' as CustomClothingRequest['garmentType'],
     fabricPreference: 'Pure Mulberry Silk',
-    colorPreference: 'Peacock Emerald',
+    colorPreference: 'Peacock Emerald (#0F4C5C)',
     bust: '',
     waist: '',
     hip: '',
@@ -20,6 +20,9 @@ export const CustomClothingStudio: React.FC = () => {
     budgetRange: '₹25,000 - ₹50,000'
   });
 
+  const [selectedColorHex, setSelectedColorHex] = useState('#0F4C5C');
+  const [customHexInput, setCustomHexInput] = useState('#0F4C5C');
+  const [colorCategory, setColorCategory] = useState<'all' | 'jewel' | 'metallic' | 'pastel' | 'earth'>('all');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,14 +43,57 @@ export const CustomClothingStudio: React.FC = () => {
     'Handloom Khadi Cotton'
   ];
 
-  const colors = [
-    { name: 'Peacock Emerald', hex: '#0F4C5C' },
-    { name: 'Dusty Rose', hex: '#C08081' },
-    { name: 'Sage Green', hex: '#2D5A46' },
-    { name: 'Royal Crimson', hex: '#7A1C28' },
-    { name: 'Antique Gold', hex: '#9C7C38' },
-    { name: 'Midnight Navy', hex: '#1A2A3A' }
+  const curatedColors = [
+    // Royal Jewel Tones
+    { name: 'Peacock Emerald', hex: '#0F4C5C', category: 'jewel' },
+    { name: 'Royal Sapphire', hex: '#1A365D', category: 'jewel' },
+    { name: 'Imperial Amethyst', hex: '#4A154B', category: 'jewel' },
+    { name: 'Deep Ruby Crimson', hex: '#7A1C28', category: 'jewel' },
+    { name: 'Rani Fuchsia', hex: '#B81D63', category: 'jewel' },
+    { name: 'Regal Velvet Plum', hex: '#3B1443', category: 'jewel' },
+
+    // Heritage Metallics & Warm Weaves
+    { name: 'Antique Gold', hex: '#9C7C38', category: 'metallic' },
+    { name: 'Zari Brass', hex: '#C5A059', category: 'metallic' },
+    { name: 'Champagne Pearl', hex: '#E5D9C5', category: 'metallic' },
+    { name: 'Copper Rust', hex: '#944E27', category: 'metallic' },
+    { name: 'Saffron Vermillion', hex: '#D9531E', category: 'metallic' },
+    { name: 'Turmeric Haldi', hex: '#E5A93C', category: 'metallic' },
+
+    // Pastels & Florals
+    { name: 'Dusty Rose', hex: '#C08081', category: 'pastel' },
+    { name: 'Blush Peach', hex: '#F2C4B7', category: 'pastel' },
+    { name: 'Powder Sky Blue', hex: '#8EABC3', category: 'pastel' },
+    { name: 'Mint Pista', hex: '#94B49F', category: 'pastel' },
+    { name: 'Soft Lavender', hex: '#B8A9C9', category: 'pastel' },
+    { name: 'Raw Tussar Ivory', hex: '#F4EEDB', category: 'pastel' },
+
+    // Earthy & Deep Neutrals
+    { name: 'Sage Green', hex: '#2D5A46', category: 'earth' },
+    { name: 'Olive Mehendi', hex: '#4D5634', category: 'earth' },
+    { name: 'Midnight Navy', hex: '#1A2A3A', category: 'earth' },
+    { name: 'Deep Spruce', hex: '#143D32', category: 'earth' },
+    { name: 'Charcoal Slate', hex: '#2F353B', category: 'earth' },
+    { name: 'Sandalwood Ochre', hex: '#8C6D37', category: 'earth' }
   ];
+
+  const filteredColors = colorCategory === 'all' 
+    ? curatedColors 
+    : curatedColors.filter(c => c.category === colorCategory);
+
+  const handleSelectColor = (name: string, hex: string) => {
+    setSelectedColorHex(hex);
+    setCustomHexInput(hex);
+    setFormData(prev => ({ ...prev, colorPreference: `${name} (${hex})` }));
+  };
+
+  const handleCustomHexChange = (hex: string) => {
+    setCustomHexInput(hex);
+    if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+      setSelectedColorHex(hex);
+      setFormData(prev => ({ ...prev, colorPreference: `Custom Shade (${hex.toUpperCase()})` }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,42 +245,152 @@ Special Notes: ${formData.specialNotes || 'None'}`;
               </div>
 
               {/* Step 2: Fabric & Color */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-[#E8DFD5]">
-                <div>
-                  <h4 className="font-serif text-lg font-bold text-[#24211E] mb-3">
-                    2. Fabric & Weave Preference
-                  </h4>
-                  <select
-                    value={formData.fabricPreference}
-                    onChange={(e) => setFormData({ ...formData, fabricPreference: e.target.value })}
-                    className="w-full p-3 bg-[#FAF7F2] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C]"
-                  >
-                    {fabrics.map(f => (
-                      <option key={f} value={f}>{f}</option>
-                    ))}
-                  </select>
-                </div>
+              <div className="space-y-6 pt-4 border-t border-[#E8DFD5]">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-1">
+                    <h4 className="font-serif text-lg font-bold text-[#24211E] mb-2">
+                      2. Fabric & Weave
+                    </h4>
+                    <p className="text-xs text-[#736B5E] mb-3 leading-relaxed">
+                      Select heirloom grade handloom silks, Banarasi brocades, or kora organza.
+                    </p>
+                    <select
+                      value={formData.fabricPreference}
+                      onChange={(e) => setFormData({ ...formData, fabricPreference: e.target.value })}
+                      className="w-full p-3 bg-[#FAF7F2] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C]"
+                    >
+                      {fabrics.map(f => (
+                        <option key={f} value={f}>{f}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div>
-                  <h4 className="font-serif text-lg font-bold text-[#24211E] mb-3">
-                    Color Palette
-                  </h4>
-                  <div className="grid grid-cols-3 gap-2">
-                    {colors.map((c) => (
-                      <button
-                        key={c.name}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, colorPreference: c.name })}
-                        className={`p-2 border text-left flex items-center gap-2 transition-all ${
-                          formData.colorPreference === c.name
-                            ? 'border-[#0F4C5C] bg-white ring-1 ring-[#0F4C5C]'
-                            : 'border-[#E8DFD5] bg-[#FAF7F2]'
-                        }`}
-                      >
-                        <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: c.hex }} />
-                        <span className="text-[11px] text-[#24211E] truncate">{c.name}</span>
-                      </button>
-                    ))}
+                  <div className="md:col-span-2 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <h4 className="font-serif text-lg font-bold text-[#24211E] flex items-center gap-2">
+                          <Palette className="w-4 h-4 text-[#9C7C38]" />
+                          Color Palette Options
+                        </h4>
+                        <p className="text-xs text-[#736B5E]">
+                          Select from 24 standardized handloom shades or define custom RGB/Hex swatches.
+                        </p>
+                      </div>
+
+                      {/* Active Color Preview Badge */}
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#FAF7F2] border border-[#D4C7B5] rounded-xs shrink-0">
+                        <span 
+                          className="w-4 h-4 rounded-full border border-black/10 shrink-0 shadow-xs" 
+                          style={{ backgroundColor: selectedColorHex }} 
+                        />
+                        <span className="text-[11px] font-semibold text-[#24211E] truncate max-w-[150px]">
+                          {formData.colorPreference}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Color Category Tabs */}
+                    <div className="flex flex-wrap gap-1.5 border-b border-[#E8DFD5] pb-2">
+                      {[
+                        { id: 'all', label: 'All Shades (24)' },
+                        { id: 'jewel', label: 'Jewel Tones' },
+                        { id: 'metallic', label: 'Heritage Metallics' },
+                        { id: 'pastel', label: 'Pastels & Florals' },
+                        { id: 'earth', label: 'Earth & Neutrals' }
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setColorCategory(tab.id as any)}
+                          className={`px-2.5 py-1 text-[11px] font-semibold tracking-wider uppercase transition-colors cursor-pointer ${
+                            colorCategory === tab.id
+                              ? 'bg-[#0F4C5C] text-white shadow-xs'
+                              : 'bg-[#FAF7F2] text-[#736B5E] hover:text-[#24211E] hover:bg-[#F2ECE3]'
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Curated Colors Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-56 overflow-y-auto pr-1">
+                      {filteredColors.map((c) => {
+                        const isSelected = selectedColorHex.toLowerCase() === c.hex.toLowerCase();
+                        return (
+                          <button
+                            key={c.name}
+                            type="button"
+                            onClick={() => handleSelectColor(c.name, c.hex)}
+                            className={`p-2 border text-left flex items-center justify-between gap-1.5 transition-all cursor-pointer ${
+                              isSelected
+                                ? 'border-[#0F4C5C] bg-white ring-1 ring-[#0F4C5C] shadow-xs'
+                                : 'border-[#E8DFD5] bg-[#FAF7F2] hover:border-[#D4C7B5]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span 
+                                className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/10 shadow-2xs" 
+                                style={{ backgroundColor: c.hex }} 
+                              />
+                              <div className="min-w-0">
+                                <span className="text-[11px] font-medium text-[#24211E] block truncate leading-tight">
+                                  {c.name}
+                                </span>
+                                <span className="text-[9px] font-mono text-[#736B5E] block leading-tight">
+                                  {c.hex}
+                                </span>
+                              </div>
+                            </div>
+                            {isSelected && <Check className="w-3 h-3 text-[#0F4C5C] shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom Color Picker & Hex Code Input */}
+                    <div className="p-3 bg-[#FAF7F2] border border-[#D4C7B5] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Pipette className="w-4 h-4 text-[#8C6D37]" />
+                        <div>
+                          <span className="text-xs font-bold text-[#24211E] block">
+                            Custom Color Picker
+                          </span>
+                          <span className="text-[10px] text-[#736B5E]">
+                            Click swatch to pick or enter custom 6-digit hex code
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label 
+                          htmlFor="custom-color-wheel"
+                          className="relative w-8 h-8 rounded-full border-2 border-white shadow-xs cursor-pointer overflow-hidden shrink-0 ring-1 ring-[#D4C7B5]"
+                          style={{ backgroundColor: selectedColorHex }}
+                          title="Click to open color picker"
+                        >
+                          <input
+                            id="custom-color-wheel"
+                            type="color"
+                            value={selectedColorHex}
+                            onChange={(e) => handleCustomHexChange(e.target.value)}
+                            className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                          />
+                        </label>
+                        <input
+                          id="custom-hex-code-input"
+                          type="text"
+                          maxLength={7}
+                          value={customHexInput}
+                          onChange={(e) => handleCustomHexChange(e.target.value)}
+                          placeholder="#0F4C5C"
+                          className="w-24 p-1.5 text-xs font-mono font-bold uppercase text-[#24211E] bg-white border border-[#D4C7B5] focus:outline-none focus:border-[#0F4C5C]"
+                        />
+                        <span className="text-[10px] uppercase font-bold text-[#8C6D37]">
+                          Hex Swatch
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -338,7 +494,7 @@ Special Notes: ${formData.specialNotes || 'None'}`;
                     <input
                       type="tel"
                       required
-                      placeholder="e.g. +91 98451 23098"
+                      placeholder="e.g. +91 98765 43210"
                       value={formData.customerPhone}
                       onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
                       className="w-full p-2.5 bg-[#FAF7F2] border border-[#D4C7B5] text-xs focus:outline-none focus:border-[#0F4C5C]"
@@ -371,22 +527,21 @@ Special Notes: ${formData.specialNotes || 'None'}`;
                 </div>
               </div>
 
-              {/* Submit Buttons */}
-              <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#E8DFD5]">
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs font-semibold text-[#0F4C5C] hover:text-[#0b3844] flex items-center gap-1.5"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  Pre-fill & Send Direct via WhatsApp
-                </a>
+              {/* Submit Section */}
+              <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#E8DFD5]">
+                <div className="text-left">
+                  <p className="text-xs font-semibold text-[#24211E]">
+                    Complimentary Atelier Fitting Consultation
+                  </p>
+                  <p className="text-[11px] text-[#736B5E]">
+                    Our master patternmaker reviews all measurements before hand-cutting your ensemble.
+                  </p>
+                </div>
 
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full sm:w-auto px-8 py-3.5 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-[0.16em] flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                  className="w-full sm:w-auto px-9 py-3.5 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-[0.16em] flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer shrink-0"
                 >
                   {isSubmitting ? (
                     'Recording Atelier Request...'

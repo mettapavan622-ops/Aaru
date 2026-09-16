@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
-import { AaruLogo, AaruEmblem, AaruTeluguLogo, AaruEnglishLogo } from './AaruLogo';
+import { AaruLogo, AaruEmblem } from './AaruLogo';
 import { 
   Mail, 
   Lock, 
@@ -37,17 +37,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   // Primary Screen Modes: 'login' | 'signup' | 'forgot-password'
   const [screenMode, setScreenMode] = useState<'login' | 'signup' | 'forgot-password'>(initialMode);
   
-  // Sign Up Tab Toggle: exactly TWO options: 'manual' (Option A) vs 'brevo-otp' (Option B)
-  const [signupTab, setSignupTab] = useState<'manual' | 'brevo-otp'>('manual');
+  // Sign Up Tab Toggle: exactly TWO options: 'manual' (Option A) vs 'otp' (Option B)
+  const [signupTab, setSignupTab] = useState<'manual' | 'otp'>('manual');
   
-  // Step for Option B (Email OTP via Brevo): 'form' -> 'otp'
+  // Step for Option B (Email OTP): 'form' -> 'otp'
   const [signupOtpStep, setSignupOtpStep] = useState<'form' | 'otp'>('form');
 
   // Steps for Forgot Password Flow: 1: 'request-email' -> 2: 'verify-otp' -> 3: 'reset-password' -> 4: 'success'
   const [forgotStep, setForgotStep] = useState<'request-email' | 'verify-otp' | 'reset-password' | 'success'>('request-email');
-
-  // Logo Display Switcher
-  const [logoDisplayMode, setLogoDisplayMode] = useState<'dual' | 'telugu' | 'english'>('dual');
 
   // ---------------------------------------------------------------------------
   // Form Field States
@@ -66,7 +63,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [showManualPassword, setShowManualPassword] = useState(false);
   const [showManualConfirmPassword, setShowManualConfirmPassword] = useState(false);
 
-  // Sign Up Option B: Email OTP via Brevo (Name, Contact Number, Email)
+  // Sign Up Option B: Email OTP (Name, Contact Number, Email)
   const [otpSignupName, setOtpSignupName] = useState('');
   const [otpSignupPhone, setOtpSignupPhone] = useState('');
   const [otpSignupEmail, setOtpSignupEmail] = useState('');
@@ -319,8 +316,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   };
 
   // ===========================================================================
-  // Requirement 1: Sign Up Flow - Option B (Email OTP via Brevo)
-  // Fields: Name, Contact Number, Email Address -> Brevo OTP -> Verify -> Account Created
+  // Requirement 1: Sign Up Flow - Option B (Email OTP)
+  // Fields: Name, Contact Number, Email Address -> Email OTP -> Verify -> Account Created
   // ===========================================================================
   const handleSendSignupOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -346,7 +343,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to dispatch verification code via Brevo.');
+        throw new Error(data.error || 'Failed to dispatch verification code.');
       }
 
       if (data.demoOtp) {
@@ -356,7 +353,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       setSignupOtpStep('otp');
       setSignupCountdown(30);
       setSignupCanResend(false);
-      setSuccessToast(data.message || `Verification code sent to ${otpSignupEmail.trim()} via Brevo.`);
+      setSuccessToast(data.message || `Verification code sent to ${otpSignupEmail.trim()}.`);
     } catch (err: any) {
       setErrorMessage(err.message || 'Unable to send verification code. Please check your email.');
     } finally {
@@ -434,7 +431,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
       setSignupCountdown(30);
       setSignupCanResend(false);
-      setSuccessToast(data.message || 'New verification code sent via Brevo.');
+      setSuccessToast(data.message || 'New verification code sent.');
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to resend code.');
     } finally {
@@ -444,7 +441,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
   // ===========================================================================
   // Requirement 3: Forgot Password & Account Recovery Flow
-  // Step 1: Prompt Email -> Brevo OTP
+  // Step 1: Prompt Email -> Email OTP
   // Step 2: Verify OTP
   // Step 3: Set New Password & Confirm Password
   // ===========================================================================
@@ -480,7 +477,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       setForgotStep('verify-otp');
       setRecoveryCountdown(30);
       setRecoveryCanResend(false);
-      setSuccessToast(data.message || `Recovery code sent to ${forgotEmail.trim()} via Brevo.`);
+      setSuccessToast(data.message || `Recovery code sent to ${forgotEmail.trim()}.`);
     } catch (err: any) {
       setErrorMessage(err.message || 'Unable to process recovery request.');
     } finally {
@@ -596,7 +593,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
       setRecoveryCountdown(30);
       setRecoveryCanResend(false);
-      setSuccessToast(data.message || 'New recovery code sent via Brevo.');
+      setSuccessToast(data.message || 'New recovery code sent.');
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to resend code.');
     } finally {
@@ -640,54 +637,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           </button>
         )}
 
-        {/* Brand Insignia & Telugu / English Logo */}
+        {/* Brand Insignia & Authentic Identity: Logo, Name & Tagline Only */}
         <div className="text-center mb-6">
           <div className="flex justify-center mb-2">
-            {logoDisplayMode === 'dual' && <AaruLogo className="h-10 text-[#0F4C5C]" />}
-            {logoDisplayMode === 'telugu' && <AaruTeluguLogo className="h-9 text-[#0F4C5C]" />}
-            {logoDisplayMode === 'english' && <AaruEnglishLogo className="h-7 text-[#0F4C5C]" />}
+            <AaruLogo className="h-10 text-[#0F4C5C]" showSubtitle={false} size="md" />
           </div>
 
-          <p className="text-[10px] tracking-[0.25em] text-[#8C6D37] uppercase font-bold">
+          <p className="text-[11px] tracking-[0.25em] text-[#8C6D37] uppercase font-bold">
+            A Woman’s Sixth Element
+          </p>
+          <p className="text-[9px] tracking-[0.2em] text-[#736B5E] uppercase mt-0.5">
             హైదరాబాద్ • బెంగళూరు • Global Luxury Atelier
           </p>
-
-          {/* Logo switchers */}
-          <div className="mt-2.5 flex items-center justify-center gap-1">
-            <button
-              type="button"
-              onClick={() => setLogoDisplayMode('dual')}
-              className={`px-2 py-0.5 text-[9px] uppercase tracking-wider font-semibold transition-colors cursor-pointer ${
-                logoDisplayMode === 'dual'
-                  ? 'bg-[#0F4C5C] text-white'
-                  : 'bg-[#FAF7F2] text-[#736B5E] hover:text-[#24211E]'
-              }`}
-            >
-              Dual
-            </button>
-            <button
-              type="button"
-              onClick={() => setLogoDisplayMode('telugu')}
-              className={`px-2 py-0.5 text-[9px] uppercase tracking-wider font-semibold transition-colors cursor-pointer ${
-                logoDisplayMode === 'telugu'
-                  ? 'bg-[#0F4C5C] text-white'
-                  : 'bg-[#FAF7F2] text-[#736B5E] hover:text-[#24211E]'
-              }`}
-            >
-              తెలుగు
-            </button>
-            <button
-              type="button"
-              onClick={() => setLogoDisplayMode('english')}
-              className={`px-2 py-0.5 text-[9px] uppercase tracking-wider font-semibold transition-colors cursor-pointer ${
-                logoDisplayMode === 'english'
-                  ? 'bg-[#0F4C5C] text-white'
-                  : 'bg-[#FAF7F2] text-[#736B5E] hover:text-[#24211E]'
-              }`}
-            >
-              English
-            </button>
-          </div>
         </div>
 
         {/* ===================================================================== */}
@@ -768,7 +729,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   required
                   value={signInEmail}
                   onChange={(e) => setSignInEmail(e.target.value)}
-                  placeholder="patron@aaru.luxury"
+                  placeholder="e.g. aditi.sharma@example.com"
                   className="w-full pl-9 pr-3 py-2.5 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
                 />
                 <Mail className="w-4 h-4 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -872,16 +833,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 type="button"
                 id="signup-tab-otp-btn"
                 onClick={() => {
-                  setSignupTab('brevo-otp');
+                  setSignupTab('otp');
                   setErrorMessage('');
                 }}
                 className={`flex-1 py-2 px-2 text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center ${
-                  signupTab === 'brevo-otp'
+                  signupTab === 'otp'
                     ? 'bg-white text-[#0F4C5C] shadow-xs border border-[#D4C7B5]'
                     : 'text-[#736B5E] hover:text-[#24211E]'
                 }`}
               >
-                Option B: Email OTP (Brevo)
+                Option B: Email OTP
               </button>
             </div>
 
@@ -903,7 +864,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                       required
                       value={manualName}
                       onChange={(e) => setManualName(e.target.value)}
-                      placeholder="e.g. Anantha Rao"
+                      placeholder="e.g. Aditi Sharma"
                       className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
                     />
                     <UserIcon className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -925,7 +886,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                       required
                       value={manualPhone}
                       onChange={(e) => setManualPhone(e.target.value)}
-                      placeholder="+91 98451 23098 or (555) 234-5678"
+                      placeholder="e.g. +91 98765 43210"
                       className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
                     />
                     <Phone className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -944,7 +905,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                       required
                       value={manualEmail}
                       onChange={(e) => setManualEmail(e.target.value)}
-                      placeholder="anantharao2018@gmail.com"
+                      placeholder="e.g. aditi.sharma@example.com"
                       className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
                     />
                     <Mail className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1029,10 +990,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             )}
 
             {/* --------------------------------------------------------------- */}
-            {/* OPTION B: Email OTP via Brevo */}
-            {/* Form asking ONLY for Name, Contact Number, Email Address -> Brevo OTP */}
+            {/* OPTION B: Email OTP */}
+            {/* Form asking ONLY for Name, Contact Number, Email Address -> Email OTP */}
             {/* --------------------------------------------------------------- */}
-            {signupTab === 'brevo-otp' && (
+            {signupTab === 'otp' && (
               <>
                 {signupOtpStep === 'form' ? (
                   <form onSubmit={handleSendSignupOtp} className="space-y-3.5 animate-in fade-in duration-150">
@@ -1048,7 +1009,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                           required
                           value={otpSignupName}
                           onChange={(e) => setOtpSignupName(e.target.value)}
-                          placeholder="e.g. Anantha Rao"
+                          placeholder="e.g. Aditi Sharma"
                           className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
                         />
                         <UserIcon className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1070,7 +1031,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                           required
                           value={otpSignupPhone}
                           onChange={(e) => setOtpSignupPhone(e.target.value)}
-                          placeholder="+91 98451 23098 or (555) 234-5678"
+                          placeholder="e.g. +91 98765 43210"
                           className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
                         />
                         <Phone className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1089,13 +1050,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                           required
                           value={otpSignupEmail}
                           onChange={(e) => setOtpSignupEmail(e.target.value)}
-                          placeholder="anantharao2018@gmail.com"
+                          placeholder="e.g. aditi.sharma@example.com"
                           className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
                         />
                         <Mail className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       </div>
                       <p className="text-[10px] text-[#736B5E] mt-1.5 leading-relaxed">
-                        We will dispatch a secure 6-digit one-time code to your email using the Brevo transactional email API.
+                        We will dispatch a secure 6-digit one-time code to your email address.
                       </p>
                     </div>
 
@@ -1108,7 +1069,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                       {isSubmitting ? (
                         <>
                           <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Dispatching Brevo Code...</span>
+                          <span>Dispatching Verification Code...</span>
                         </>
                       ) : (
                         <>
@@ -1172,13 +1133,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                       </div>
                     </div>
 
-                    {/* Simulated Brevo OTP Helper Indicator for Rapid Sandbox Evaluation */}
+                    {/* Simulated Verification OTP Helper Indicator for Rapid Sandbox Evaluation */}
                     {signupDemoOtp && (
                       <div className="p-2.5 bg-[#FAF7F2] border border-[#D4C7B5] flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5 text-[#8C6D37]" />
                           <span className="text-[#5C5549]">
-                            Brevo Sandbox Code: <strong className="text-[#0F4C5C] font-mono">{signupDemoOtp}</strong>
+                            Demo Sandbox Code: <strong className="text-[#0F4C5C] font-mono">{signupDemoOtp}</strong>
                           </span>
                         </div>
                         <button
@@ -1200,7 +1161,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                       {isSubmitting ? (
                         <>
                           <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Verifying with Brevo...</span>
+                          <span>Verifying Code...</span>
                         </>
                       ) : (
                         <>
@@ -1248,7 +1209,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         )}
 
         {/* ===================================================================== */}
-        {/* VIEW 3: FORGOT PASSWORD & RECOVERY (Requirement 3: Brevo OTP Recovery) */}
+        {/* VIEW 3: FORGOT PASSWORD & RECOVERY (Requirement 3: Email OTP Recovery) */}
         {/* ===================================================================== */}
         {screenMode === 'forgot-password' && (
           <div className="space-y-4">
@@ -1256,7 +1217,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             {forgotStep === 'request-email' && (
               <form onSubmit={handleForgotRequestOtp} className="space-y-4 animate-in fade-in duration-150">
                 <p className="text-xs text-[#5C5549] leading-relaxed">
-                  Enter your registered atelier email address. We will dispatch a secure 6-digit recovery code via the Brevo transactional email gateway.
+                  Enter your registered atelier email address. We will dispatch a secure 6-digit recovery code to your inbox.
                 </p>
 
                 <div>
@@ -1270,7 +1231,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                       required
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
-                      placeholder="anantharao2018@gmail.com"
+                      placeholder="e.g. aditi.sharma@example.com"
                       className="w-full pl-9 pr-3 py-2.5 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
                     />
                     <Mail className="w-4 h-4 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1286,7 +1247,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   {isSubmitting ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Dispatching Brevo Code...</span>
+                      <span>Dispatching Recovery Code...</span>
                     </>
                   ) : (
                     <>
@@ -1357,7 +1318,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-[#8C6D37]" />
                       <span className="text-[#5C5549]">
-                        Brevo Sandbox Code: <strong className="text-[#0F4C5C] font-mono">{recoveryDemoOtp}</strong>
+                        Demo Recovery Code: <strong className="text-[#0F4C5C] font-mono">{recoveryDemoOtp}</strong>
                       </span>
                     </div>
                     <button

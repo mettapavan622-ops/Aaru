@@ -85,12 +85,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileCategoriesOpen, setIsMobileCategoriesOpen] = useState(false);
   const [isCategoriesMenuOpen, setIsCategoriesMenuOpen] = useState(false);
-  const [isShopMoreOpen, setIsShopMoreOpen] = useState(false);
-  const [isMobileShopMoreOpen, setIsMobileShopMoreOpen] = useState(false);
-  const [mobileCategoryExpanded, setMobileCategoryExpanded] = useState<Record<string, boolean>>({});
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
-  const shopMenuRef = useRef<HTMLLIElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const categoriesMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -99,9 +95,6 @@ export const Header: React.FC<HeaderProps> = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
         setIsAccountMenuOpen(false);
-      }
-      if (shopMenuRef.current && !shopMenuRef.current.contains(e.target as Node)) {
-        setIsShopMoreOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -344,7 +337,7 @@ export const Header: React.FC<HeaderProps> = ({
                           <Phone className="w-3.5 h-3.5 text-[#8C6D37] shrink-0" />
                           <span className="text-[#8C6D37] font-medium">Mobile:</span>
                           <span className="font-mono text-[#24211E] font-medium truncate">
-                            {currentUser.phone || '+91 98451 23098'}
+                            {currentUser.phone || '+91 98765 43210'}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-[#5C5549]">
@@ -586,11 +579,8 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </li>
 
-            {/* Shop Section with "More" Accordion Toggle */}
-            <li 
-              className="relative flex items-center gap-1"
-              ref={shopMenuRef}
-            >
+            {/* Shop Section */}
+            <li>
               <button
                 id="nav-link-shop-the-look"
                 type="button"
@@ -602,115 +592,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Shop to Look</span>
                 {activeTab === 'shop-the-look' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0F4C5C] -mb-1" />}
               </button>
-
-              {/* 'More' Accordion Expansion Button near Shop Section */}
-              <button
-                id="header-shop-more-toggle"
-                type="button"
-                onClick={() => setIsShopMoreOpen(!isShopMoreOpen)}
-                className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-xs border transition-colors flex items-center gap-0.5 cursor-pointer ${
-                  isShopMoreOpen
-                    ? 'bg-[#0F4C5C] text-white border-[#0F4C5C]'
-                    : 'bg-white/80 text-[#8C6D37] border-[#D4C7B5] hover:border-[#0F4C5C] hover:text-[#0F4C5C]'
-                }`}
-                title="Expand more shop options"
-              >
-                <span>More</span>
-                <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-200 ${isShopMoreOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Accordion Dropdown Panel for Shop More */}
-              {isShopMoreOpen && (
-                <div 
-                  id="shop-more-dropdown-panel"
-                  className="absolute top-full left-0 mt-2 w-72 bg-white border border-[#D4C7B5] shadow-2xl z-50 p-4 animate-in fade-in slide-in-from-top-1 duration-150"
-                >
-                  <div className="flex items-center justify-between pb-2 border-b border-[#E8DFD5] mb-3">
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-[#8C6D37]">
-                      Shop Curated Selections
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setIsShopMoreOpen(false)}
-                      className="text-[10px] text-gray-400 hover:text-gray-700 cursor-pointer"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#0F4C5C] mb-1">
-                        By Fabric & Craft
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {['Pure Silk', 'Tissue Organza', 'Chanderi Brocade', 'Handloom Cotton'].map((fabric) => (
-                          <button
-                            key={fabric}
-                            type="button"
-                            onClick={() => {
-                              setIsShopMoreOpen(false);
-                              if (onSelectCategory) onSelectCategory(fabric);
-                            }}
-                            className="px-2 py-0.5 bg-[#FAF9F5] border border-[#E8DFD5] text-[10px] text-[#4A4339] hover:bg-[#0F4C5C] hover:text-white rounded-xs transition-colors"
-                          >
-                            {fabric}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#0F4C5C] mb-1">
-                        By Occasion
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {['Bridal Heirlooms', 'Cocktail & Sangeet', 'Festive Pooja', 'Everyday Drape'].map((occasion) => (
-                          <button
-                            key={occasion}
-                            type="button"
-                            onClick={() => {
-                              setIsShopMoreOpen(false);
-                              if (onSelectCategory) onSelectCategory(occasion);
-                            }}
-                            className="px-2 py-0.5 bg-[#FAF9F5] border border-[#E8DFD5] text-[10px] text-[#4A4339] hover:bg-[#0F4C5C] hover:text-white rounded-xs transition-colors"
-                          >
-                            {occasion}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#0F4C5C] mb-1">
-                        Curated Edits
-                      </p>
-                      <div className="flex flex-col space-y-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsShopMoreOpen(false);
-                            setActiveTab('sarees-rts');
-                          }}
-                          className="text-[11px] text-left text-[#5C5549] hover:text-[#0F4C5C] font-medium"
-                        >
-                          → Sarees Ready to Ship (24-Hour Dispatch)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsShopMoreOpen(false);
-                            setActiveTab('custom-clothing');
-                          }}
-                          className="text-[11px] text-left text-[#5C5549] hover:text-[#0F4C5C] font-medium"
-                        >
-                          → Bespoke Customised Clothing Studio
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </li>
 
             <li>
@@ -896,67 +777,25 @@ export const Header: React.FC<HeaderProps> = ({
                 <ArrowRight className="w-4 h-4 text-[#8A8175]" />
               </button>
 
-              {/* 2. Shop to Look with "More" Expansion Accordion */}
+              {/* 2. Shop to Look */}
               <div className="border-b border-[#E8DFD5]/60">
-                <div className="flex items-center justify-between pr-2">
-                  <button
-                    id="mobile-nav-shop-the-look"
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('shop-the-look');
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`flex-1 min-h-[44px] px-3 py-2.5 text-left flex items-center justify-between hover:bg-white transition-colors ${
-                      activeTab === 'shop-the-look' ? 'text-[#0F4C5C] bg-white font-bold border-l-3 border-[#0F4C5C]' : ''
-                    }`}
-                  >
-                    <span>Shop to Look</span>
-                  </button>
-
-                  {/* 'More' Button near Shop */}
-                  <button
-                    type="button"
-                    id="mobile-shop-more-btn"
-                    onClick={() => setIsMobileShopMoreOpen(!isMobileShopMoreOpen)}
-                    className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-xs border transition-colors flex items-center gap-1 cursor-pointer ${
-                      isMobileShopMoreOpen
-                        ? 'bg-[#0F4C5C] text-white border-[#0F4C5C]'
-                        : 'bg-white text-[#8C6D37] border-[#D4C7B5]'
-                    }`}
-                  >
-                    <span>More</span>
-                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isMobileShopMoreOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                </div>
-
-                {/* Mobile Shop More Accordion Sub-options */}
-                {isMobileShopMoreOpen && (
-                  <div className="bg-white px-3 py-2 border-t border-[#E8DFD5] space-y-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#8C6D37]">
-                      Explore Shop Options
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['Pure Silk Sarees', 'Tissue Organza', 'Bridal Lehengas', 'Ready to Ship', 'Custom Tailoring'].map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => {
-                            if (opt === 'Ready to Ship') setActiveTab('sarees-rts');
-                            else if (opt === 'Custom Tailoring') setActiveTab('custom-clothing');
-                            else if (onSelectCategory) onSelectCategory(opt);
-                            setIsMobileMenuOpen(false);
-                          }}
-                          className="px-2 py-1 bg-[#FAF9F5] border border-[#D4C7B5] text-[10px] text-[#24211E] rounded-xs hover:bg-[#0F4C5C] hover:text-white"
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <button
+                  id="mobile-nav-shop-the-look"
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('shop-the-look');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[44px] px-3 py-2.5 text-left flex items-center justify-between hover:bg-white transition-colors ${
+                    activeTab === 'shop-the-look' ? 'text-[#0F4C5C] bg-white font-bold border-l-3 border-[#0F4C5C]' : ''
+                  }`}
+                >
+                  <span>Shop to Look</span>
+                  <ArrowRight className="w-4 h-4 text-[#8A8175]" />
+                </button>
               </div>
 
-              {/* 3. Categories with Expandable Subcategories Accordion */}
+              {/* 3. Categories Standard Clean List */}
               <div className="border-b border-[#E8DFD5]/60">
                 <button
                   id="mobile-nav-categories-toggle"
@@ -975,78 +814,35 @@ export const Header: React.FC<HeaderProps> = ({
 
                 {isMobileCategoriesOpen && (
                   <div id="mobile-categories-accordion" className="bg-white/90 border-t border-[#E8DFD5] pl-3 pr-2 py-1 divide-y divide-[#FAF7F2] max-h-72 overflow-y-auto">
-                    {categories.map((cat) => {
-                      const isCatExpanded = !!mobileCategoryExpanded[cat.id || cat.name];
-
-                      return (
-                        <div key={cat.id} className="py-1">
-                          <div className="flex items-center justify-between">
-                            <button
-                              id={`mobile-cat-${cat.slug}`}
-                              type="button"
-                              onClick={() => {
-                                if (cat.name === 'Customized Clothing') {
-                                  setActiveTab('custom-clothing');
-                                } else if (onSelectCategory) {
-                                  onSelectCategory(cat.name);
-                                } else {
-                                  setActiveTab(cat.name);
-                                }
-                                setIsMobileMenuOpen(false);
-                              }}
-                              className="flex-1 min-h-[40px] px-2 py-1 text-left flex items-center gap-2.5 text-[11px] font-medium text-[#4A4339] hover:text-[#0F4C5C]"
-                            >
-                              <img 
-                                src={cat.image} 
-                                alt={cat.name} 
-                                className="w-6 h-6 object-cover border border-[#E8DFD5] bg-[#FAF7F2]" 
-                              />
-                              <span>{cat.name}</span>
-                            </button>
-
-                            {/* 'More' Button for Each Category in Mobile Menu */}
-                            <button
-                              type="button"
-                              id={`mobile-cat-more-${cat.slug || cat.id}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setMobileCategoryExpanded(prev => ({
-                                  ...prev,
-                                  [cat.id || cat.name]: !prev[cat.id || cat.name]
-                                }));
-                              }}
-                              className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded-xs border transition-colors flex items-center gap-0.5 cursor-pointer ${
-                                isCatExpanded
-                                  ? 'bg-[#0F4C5C] text-white border-[#0F4C5C]'
-                                  : 'bg-white text-[#8C6D37] border-[#D4C7B5]'
-                              }`}
-                            >
-                              <span>More</span>
-                              <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-200 ${isCatExpanded ? 'rotate-180' : ''}`} />
-                            </button>
+                    {categories.map((cat) => (
+                      <div key={cat.id} className="py-1">
+                        <button
+                          id={`mobile-cat-${cat.slug}`}
+                          type="button"
+                          onClick={() => {
+                            if (cat.name === 'Customized Clothing') {
+                              setActiveTab('custom-clothing');
+                            } else if (onSelectCategory) {
+                              onSelectCategory(cat.name);
+                            } else {
+                              setActiveTab(cat.name);
+                            }
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="w-full min-h-[40px] px-2 py-1 text-left flex items-center justify-between text-[11px] font-medium text-[#4A4339] hover:text-[#0F4C5C] hover:bg-[#FAF7F2] transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <img 
+                              src={cat.image} 
+                              alt={cat.name} 
+                              className="w-6 h-6 object-cover border border-[#E8DFD5] bg-[#FAF7F2]" 
+                            />
+                            <span>{cat.name}</span>
                           </div>
-
-                          {/* Expanded sub-options for this category in mobile */}
-                          {isCatExpanded && (
-                            <div className="pl-8 pr-2 py-1.5 bg-[#FAF9F5] border-t border-[#E8DFD5]/60 flex flex-wrap gap-1">
-                              {['Handloom Silk', 'Zari Border', 'Festive Edit', 'Artisanal Loom'].map((subTag) => (
-                                <button
-                                  key={subTag}
-                                  type="button"
-                                  onClick={() => {
-                                    if (onSelectCategory) onSelectCategory(`${cat.name} ${subTag}`);
-                                    setIsMobileMenuOpen(false);
-                                  }}
-                                  className="px-2 py-0.5 bg-white border border-[#D4C7B5] text-[9px] text-[#4A4339] rounded-xs"
-                                >
-                                  {subTag}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                          <span className="text-[10px] text-[#8A8175] font-mono">→</span>
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

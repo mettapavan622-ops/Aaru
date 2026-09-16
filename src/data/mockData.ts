@@ -555,6 +555,184 @@ export const INITIAL_PRODUCTS: Product[] = [
       keywords: ['Occasion Wear', 'Brocade Ensemble', 'AARU Luxury']
     },
     createdAt: '2026-09-09T15:00:00Z'
+  },
+  {
+    id: 'prod-012',
+    title: 'Amrapali Hand-Painted Kalamkari Silk Saree',
+    subtitle: 'Natural dye vegetable-block and freehand brush penwork on pure silk',
+    slug: 'amrapali-hand-painted-kalamkari-silk-saree',
+    category: 'Sarees',
+    collection: 'Sixth Element',
+    price: 34500,
+    salePrice: 31000,
+    isOnSale: true,
+    isReadyToShip: true,
+    description: 'An authentic Srikalahasti Kalamkari masterpiece portraying sacred flora and mythological paisleys drawn entirely by hand with bamboo kalam and river-purified organic minerals.',
+    fabric: 'Pure Mulberry Tussar Silk',
+    craft: 'Hand-drawn Bamboo Kalamkari with Vegetable Dyes',
+    careInstructions: 'Dry clean only. Store wrapped in pure unbleached muslin.',
+    fitAndSizeInfo: 'Length: 5.5 meters, Width: 46 inches. Includes unstitched contrast silk blouse piece.',
+    shippingPolicy: 'Dispatched within 24-48 business hours with silk certification.',
+    returnPolicy: '7-day hassle-free returns on unworn items.',
+    images: [
+      'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1000&q=85'
+    ],
+    variants: [
+      { id: 'v-012-1', size: 'Free Size', color: 'Earthen Madder Red', colorCode: '#8B263E', inventory: 6, sku: 'AARU-KAL-012-RED', isAvailable: true }
+    ],
+    totalInventory: 6,
+    tags: ['Ready to Ship', 'Kalamkari', 'Natural Dyes', 'Heritage Weave'],
+    occasion: 'Intimate Celebrations, Poojas & Art Soirées',
+    isFeatured: true,
+    seo: {
+      metaTitle: 'Amrapali Hand-Painted Kalamkari Silk Saree | AARU',
+      metaDescription: 'Authentic Kalamkari hand-painted silk saree by AARU Atelier.',
+      keywords: ['Kalamkari Saree', 'Hand Painted Silk', 'AARU Heritage']
+    },
+    createdAt: '2026-09-10T10:00:00Z'
+  },
+  {
+    id: 'prod-013',
+    title: 'Suhani Zardozi Velvet Kurta Ensemble',
+    subtitle: 'Deep plum micro-velvet tunic with real dabka and zardozi borders',
+    slug: 'suhani-zardozi-velvet-kurta-ensemble',
+    category: 'Kurtas & Sets',
+    collection: 'Festive Edit',
+    price: 22800,
+    salePrice: 19800,
+    isOnSale: true,
+    isReadyToShip: true,
+    description: 'Sumptuous deep plum velvet structured tunic accented by antique gold bullion needlework along the neckline, cuffs, and scalloped tissue dupatta.',
+    fabric: 'Micro Velvet with Pure Tissue Organza Dupatta',
+    craft: 'Hand Zardozi with Dabka and Nakshi Needlework',
+    careInstructions: 'Specialist dry clean only.',
+    fitAndSizeInfo: 'Tailored comfort fit. Fully lined with breathable mulberry silk.',
+    shippingPolicy: 'Dispatched within 48 hours.',
+    returnPolicy: '7-day standard return period.',
+    images: [
+      'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1000&q=85'
+    ],
+    variants: [
+      { id: 'v-013-1', size: 'S', color: 'Imperial Plum', colorCode: '#4A154B', inventory: 4, sku: 'AARU-KUR-013-S', isAvailable: true },
+      { id: 'v-013-2', size: 'M', color: 'Imperial Plum', colorCode: '#4A154B', inventory: 5, sku: 'AARU-KUR-013-M', isAvailable: true },
+      { id: 'v-013-3', size: 'L', color: 'Imperial Plum', colorCode: '#4A154B', inventory: 3, sku: 'AARU-KUR-013-L', isAvailable: true }
+    ],
+    totalInventory: 12,
+    tags: ['Ready to Ship', 'Velvet Kurta', 'Zardozi'],
+    occasion: 'Winter Weddings, Sangeet & Festive Dinners',
+    isFeatured: true,
+    seo: {
+      metaTitle: 'Suhani Zardozi Velvet Kurta Ensemble | AARU',
+      metaDescription: 'Imperial plum velvet kurta set with pure hand zardozi work.',
+      keywords: ['Velvet Kurta', 'Festive Kurta Set', 'AARU Luxury']
+    },
+    createdAt: '2026-09-11T12:00:00Z'
+  },
+  {
+    id: 'prod-014',
+    title: 'Chandrika Metallic Silver Tissue Organza Saree',
+    subtitle: 'Luminous silver zari weft with cutwork scalloped borders',
+    slug: 'chandrika-metallic-silver-tissue-organza-saree',
+    category: 'Sarees',
+    collection: 'Ready to Ship',
+    price: 28500,
+    isOnSale: false,
+    isReadyToShip: true,
+    description: 'Woven with high-tension metallic silver threads interlinked with whisper-light organza silk, creating a celestial sheen that catches ambient twilight.',
+    fabric: 'Pure Tissue Organza Silk',
+    craft: 'Jacquard Zari Weft with Scalloped Cutwork',
+    careInstructions: 'Dry clean only. Iron on reverse low heat with cloth.',
+    fitAndSizeInfo: 'Length: 5.5m, Width: 47 inches. Includes matching tissue blouse fabric.',
+    shippingPolicy: 'Ready to Ship within 24 hours in luxury presentation box.',
+    returnPolicy: '7-day returns on original condition.',
+    images: [
+      'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1000&q=85',
+      'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=1000&q=85'
+    ],
+    variants: [
+      { id: 'v-014-1', size: 'Free Size', color: 'Liquid Silver', colorCode: '#C0C0C0', inventory: 8, sku: 'AARU-TIS-014-SIL', isAvailable: true }
+    ],
+    totalInventory: 8,
+    tags: ['Ready to Ship', 'Tissue Saree', 'Silver Zari', 'Party Wear'],
+    occasion: 'Cocktail Evenings, Reception & High Soirées',
+    isFeatured: true,
+    seo: {
+      metaTitle: 'Chandrika Silver Tissue Organza Saree | AARU',
+      metaDescription: 'Luminous silver tissue organza saree woven for evening receptions.',
+      keywords: ['Silver Tissue Saree', 'Organza Saree', 'AARU Haute Couture']
+    },
+    createdAt: '2026-09-12T14:00:00Z'
+  },
+  {
+    id: 'prod-015',
+    title: 'Vaidehi Pure Mulberry Silk Yardage',
+    subtitle: 'Hand-dyed 4-ply mulberry unstitched yardage for couture tailoring',
+    slug: 'vaidehi-pure-mulberry-silk-yardage',
+    category: 'Fabrics',
+    collection: 'AARU by Moni',
+    price: 11500,
+    salePrice: 9800,
+    isOnSale: true,
+    isReadyToShip: true,
+    description: 'Finest handloom silk yardage woven in Varanasi on traditional pit looms. Ideal for bespoke lehengas, achkans, and tailored festive silhouettes.',
+    fabric: '100% Pure Mulberry Silk (4-ply)',
+    craft: 'Plain Handloom Weave with Subtle Luster',
+    careInstructions: 'Dry clean only.',
+    fitAndSizeInfo: 'Sold in 4.5 meter uncut running length, 44 inches width.',
+    shippingPolicy: 'Dispatched within 24 hours.',
+    returnPolicy: 'Standard return policy applies.',
+    images: [
+      'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1000&q=85'
+    ],
+    variants: [
+      { id: 'v-015-1', size: '4.5m Cut', color: 'Royal Peacock Teal', colorCode: '#0F4C5C', inventory: 15, sku: 'AARU-FAB-015-TEA', isAvailable: true }
+    ],
+    totalInventory: 15,
+    tags: ['Silk Yardage', 'Pure Mulberry', 'Custom Tailoring'],
+    occasion: 'Bespoke Couture Design & Celebratory Tailoring',
+    isFeatured: false,
+    seo: {
+      metaTitle: 'Vaidehi Pure Mulberry Silk Yardage | AARU',
+      metaDescription: 'Raw handloom pure silk yardage for bespoke couture by AARU.',
+      keywords: ['Silk Fabric', 'Mulberry Silk', 'Custom Fabric']
+    },
+    createdAt: '2026-09-13T09:00:00Z'
+  },
+  {
+    id: 'prod-016',
+    title: 'Meenakari Antique Temple Choker Ensemble',
+    subtitle: 'Silver dipped in 24k gold leaf with uncut polki stones and tourmalines',
+    slug: 'meenakari-antique-temple-choker-ensemble',
+    category: 'Jewellery & Accents',
+    collection: 'Sixth Element',
+    price: 18500,
+    isOnSale: false,
+    isReadyToShip: true,
+    description: 'Heirloom temple jewelry handcrafted by generational karigars in Jaipur and Hyderabad. Features floral meenakari on the reverse and South Sea baroque pearls along the drop.',
+    fabric: '92.5 Sterling Silver with 24K Micro Gold Plating',
+    craft: 'Jadau Polki Setting and Reverse Meenakari Enameling',
+    careInstructions: 'Store in airtight velvet case away from moisture and fragrance.',
+    fitAndSizeInfo: 'Adjustable zari dori cord. Includes matching jhumka earrings.',
+    shippingPolicy: 'Insured express shipping in tamper-proof signature vault box.',
+    returnPolicy: 'Exchange within 7 days for store credit.',
+    images: [
+      'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=1000&q=85'
+    ],
+    variants: [
+      { id: 'v-016-1', size: 'Adjustable', color: 'Heritage Gold', colorCode: '#D4AF37', inventory: 5, sku: 'AARU-JEW-016-GLD', isAvailable: true }
+    ],
+    totalInventory: 5,
+    tags: ['Temple Jewellery', 'Polki Choker', 'Ready to Ship'],
+    occasion: 'Bridal, Muhurtham & High Auspicious Poojas',
+    isFeatured: true,
+    seo: {
+      metaTitle: 'Meenakari Antique Temple Choker Ensemble | AARU',
+      metaDescription: 'Handcrafted silver gold-plated temple choker with polki accents.',
+      keywords: ['Temple Jewellery', 'Polki Choker', 'AARU Accents']
+    },
+    createdAt: '2026-09-14T11:00:00Z'
   }
 ];
 
@@ -563,9 +741,9 @@ export const INITIAL_ORDERS: Order[] = [
     id: 'ord-89420',
     orderNumber: 'AARU-2026-89420',
     userId: 'user-demo-1',
-    customerName: 'Anantha Rao',
-    customerEmail: 'anantharao2018@gmail.com',
-    customerPhone: '+91 98451 23098',
+    customerName: 'Aditi Sharma',
+    customerEmail: 'aditi.sharma@example.com',
+    customerPhone: '+91 98765 43210',
     items: [
       {
         product: INITIAL_PRODUCTS[1],
@@ -576,13 +754,13 @@ export const INITIAL_ORDERS: Order[] = [
     ],
     shippingAddress: {
       id: 'addr-1',
-      name: 'Anantha Rao',
+      name: 'Aditi Sharma',
       street: '74 Lavelle Road, Richmond Town',
       apartment: 'Suite 402, Crescent Manor',
       city: 'Bengaluru',
       state: 'Karnataka',
       pincode: '560001',
-      phone: '+91 98451 23098',
+      phone: '+91 98765 43210',
       isDefault: true
     },
     subtotal: 26800,
@@ -609,9 +787,9 @@ export const INITIAL_ORDERS: Order[] = [
       id: 'ret-seed-89420',
       orderId: 'ord-89420',
       orderNumber: 'AARU-2026-89420',
-      customerName: 'Anantha Rao',
-      customerEmail: 'anantharao2018@gmail.com',
-      customerPhone: '+91 98451 23098',
+      customerName: 'Aditi Sharma',
+      customerEmail: 'aditi.sharma@example.com',
+      customerPhone: '+91 98765 43210',
       requestType: 'Return',
       reason: 'Sizing or Fit Issue (Blouse fit too snug at bust)',
       clientNote: 'Exquisite silk weave and craftsmanship, requesting reverse pickup for return.',
@@ -641,9 +819,9 @@ export const INITIAL_ORDERS: Order[] = [
     id: 'ord-89421',
     orderNumber: 'AARU-2026-89421',
     userId: 'user-demo-1',
-    customerName: 'Anantha Rao',
-    customerEmail: 'anantharao2018@gmail.com',
-    customerPhone: '+91 98451 23098',
+    customerName: 'Aditi Sharma',
+    customerEmail: 'aditi.sharma@example.com',
+    customerPhone: '+91 98765 43210',
     items: [
       {
         product: INITIAL_PRODUCTS[0],
@@ -654,13 +832,13 @@ export const INITIAL_ORDERS: Order[] = [
     ],
     shippingAddress: {
       id: 'addr-1',
-      name: 'Anantha Rao',
+      name: 'Aditi Sharma',
       street: '74 Lavelle Road, Richmond Town',
       apartment: 'Suite 402, Crescent Manor',
       city: 'Bengaluru',
       state: 'Karnataka',
       pincode: '560001',
-      phone: '+91 98451 23098',
+      phone: '+91 98765 43210',
       isDefault: true
     },
     subtotal: 28900,

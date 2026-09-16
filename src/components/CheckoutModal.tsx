@@ -44,7 +44,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   total,
   onOrderSuccess,
   userEmail = 'client@aaru.luxury',
-  userName = 'Anantha Rao',
+  userName = 'Aditi Sharma',
   appliedPromo = '',
   onApplyPromo,
   onRemovePromo
@@ -58,7 +58,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     city: 'Bengaluru',
     state: 'Karnataka',
     pincode: '560001',
-    phone: '+91 98451 23098',
+    phone: '+91 98765 43210',
     isDefault: true
   });
 
@@ -343,7 +343,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         prefill: {
           name: address.name || userName,
           email: userEmail,
-          contact: address.phone.replace(/[^0-9+]/g, '') || '+919845123098'
+          contact: address.phone.replace(/[^0-9+]/g, '') || '+919876543210'
         },
         notes: {
           address: `${address.street}, ${address.city}, ${address.state} - ${address.pincode}`,

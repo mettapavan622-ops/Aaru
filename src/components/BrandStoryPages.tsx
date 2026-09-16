@@ -184,7 +184,7 @@ export const ContactSection: React.FC = () => {
               <div className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-[#0F4C5C] shrink-0" />
                 <div>
-                  <p className="font-semibold">+91 (80) 4122 8900 / +91 98451 23098</p>
+                  <p className="font-semibold">+91 (80) 4122 8900 / +91 98765 43210</p>
                   <p className="text-[#736B5E]">Direct atelier telephone line</p>
                 </div>
               </div>

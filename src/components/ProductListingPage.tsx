@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Product, Category, Collection } from '../types';
 import { ProductCard } from './ProductCard';
-import { SlidersHorizontal, Sparkles, X, ChevronDown } from 'lucide-react';
+import { SlidersHorizontal, Sparkles, X, ChevronDown, Loader2 } from 'lucide-react';
 
 interface ProductListingPageProps {
   products: Product[];
@@ -34,6 +34,16 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
   const [onSaleOnly, setOnSaleOnly] = useState<boolean>(initialFilter === 'sale');
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'newest'>('featured');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+
+  // Pagination / "Load More" state
+  const INITIAL_BATCH_SIZE = 8;
+  const BATCH_INCREMENT = 4;
+  const [visibleCount, setVisibleCount] = useState<number>(INITIAL_BATCH_SIZE);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_BATCH_SIZE);
+  }, [selectedCategory, selectedCollection, readyToShipOnly, onSaleOnly, sortBy, initialFilter]);
 
   useEffect(() => {
     if (initialCategory) {
@@ -130,6 +140,22 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
     setSelectedCollection('all');
     setReadyToShipOnly(false);
     setOnSaleOnly(false);
+    setVisibleCount(INITIAL_BATCH_SIZE);
+  };
+
+  const displayedProducts = useMemo(() => {
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
+
+  const hasMore = visibleCount < filteredProducts.length;
+
+  const handleLoadMore = () => {
+    if (isLoadingMore) return;
+    setIsLoadingMore(true);
+    setTimeout(() => {
+      setVisibleCount((prev) => prev + BATCH_INCREMENT);
+      setIsLoadingMore(false);
+    }, 450);
   };
 
   return (
@@ -250,16 +276,47 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
 
         {/* Product Grid */}
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onSelectProduct={onSelectProduct}
-                isWishlisted={activeWishlist.includes(product.id)}
-                onToggleWishlist={onToggleWishlist}
-              />
-            ))}
+          <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
+              {displayedProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onSelectProduct={onSelectProduct}
+                  isWishlisted={activeWishlist.includes(product.id)}
+                  onToggleWishlist={onToggleWishlist}
+                />
+              ))}
+            </div>
+
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="mt-12 flex flex-col items-center justify-center gap-3">
+                <button
+                  type="button"
+                  id="shop-load-more-btn"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="min-w-[190px] px-8 py-3.5 bg-white border border-[#0F4C5C] text-[#0F4C5C] hover:bg-[#0F4C5C] hover:text-white transition-all text-xs font-bold uppercase tracking-[0.2em] shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group"
+                  aria-label="Load more products"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-current" />
+                      <span>Loading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>More</span>
+                      <ChevronDown className="w-4 h-4 transition-transform group-hover:translate-y-0.5" />
+                    </>
+                  )}
+                </button>
+                <p className="text-[11px] text-[#736B5E] tracking-wider">
+                  Showing {displayedProducts.length} of {filteredProducts.length} Atelier Creations
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="bg-white border border-[#E8DFD5] p-12 text-center max-w-lg mx-auto my-12 space-y-4">

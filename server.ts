@@ -8,7 +8,7 @@ import multer from 'multer';
 import Razorpay from 'razorpay';
 import { createServer as createViteServer } from 'vite';
 import { INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_ANNOUNCEMENT, CATEGORIES, COLLECTIONS, INITIAL_COUPONS } from './src/data/mockData';
-import { Product, Order, CustomClothingRequest, AnnouncementSettings, CustomerInquiry, ReturnExchangeRequest, PromoCode } from './src/types';
+import { Product, Order, CustomClothingRequest, AnnouncementSettings, CustomerInquiry, ReturnExchangeRequest, PromoCode, ReturnTrackingStepStatus } from './src/types';
 
 // Razorpay Payment Gateway Configuration
 const RAZORPAY_KEY_ID = (process.env.RAZORPAY_KEY_ID || 'rzp_live_TaprqEC6ceGPl9').trim();
@@ -182,12 +182,12 @@ const usersDatabase: Map<string, DbUser> = new Map([
     }
   ],
   [
-    'anantharao2018@gmail.com',
+    'aditi.sharma@example.com',
     {
       id: 'usr-customer-1',
-      email: 'anantharao2018@gmail.com',
-      phone: '+1 (555) 234-5678',
-      name: 'Anantha Rao',
+      email: 'aditi.sharma@example.com',
+      phone: '+91 98765 43210',
+      name: 'Aditi Sharma',
       passwordHash: defaultPatronHash,
       role: 'customer',
       createdAt: new Date().toISOString()
@@ -368,7 +368,7 @@ async function sendBrevoOtpEmail({
 
 const processedPaymentIds = new Set<string>();
 const otpStore: Record<string, { code: string; expiresAt: number }> = {
-  'anantharao2018@gmail.com': { code: '849201', expiresAt: Date.now() + 3600000 },
+  'aditi.sharma@example.com': { code: '849201', expiresAt: Date.now() + 3600000 },
   'demo@aaru.luxury': { code: '123456', expiresAt: Date.now() + 3600000 },
   '+15552345678': { code: '849201', expiresAt: Date.now() + 3600000 }
 };
@@ -1036,7 +1036,7 @@ async function startServer() {
           userId: 'user-current',
           customerName: customerName || shippingAddress?.name || 'Valued Client',
           customerEmail: customerEmail || 'client@aaru.luxury',
-          customerPhone: customerPhone || shippingAddress?.phone || '+91 98451 23098',
+          customerPhone: customerPhone || shippingAddress?.phone || '+91 98765 43210',
           items,
           shippingAddress: shippingAddress || {
             id: 'addr-default',
@@ -1045,7 +1045,7 @@ async function startServer() {
             city: 'Bengaluru',
             state: 'Karnataka',
             pincode: '560001',
-            phone: '+91 98451 23098',
+            phone: '+91 98765 43210',
             isDefault: true
           },
           subtotal: subtotal || 0,
@@ -1106,7 +1106,7 @@ async function startServer() {
         userId: 'user-current',
         customerName: customerName || shippingAddress.name || 'Valued Client',
         customerEmail: customerEmail || 'client@aaru.luxury',
-        customerPhone: customerPhone || shippingAddress.phone || '+91 98451 23098',
+        customerPhone: customerPhone || shippingAddress.phone || '+91 98765 43210',
         items,
         shippingAddress,
         subtotal,
@@ -1605,34 +1605,125 @@ async function startServer() {
   });
 
   // ===========================================================================
-  // Requirement 1: Sign Up Flow (Option A & Option B)
+  // Backend Security: Input Validation, Sanitization & Generic Error Handling
+  // Target fields: email, password, username, and display name
   // ===========================================================================
 
-  // Option A (Manual Password): Name, Contact Number, Email Address, Password, Confirm Password
-  app.post('/api/auth/signup/manual', (req: Request, res: Response) => {
-    try {
-      const { name, phone, email, password, confirmPassword } = req.body;
+  /**
+   * Detects prohibited HTML/XML tags, script injection, pseudo-protocols,
+   * inline event handlers, or null bytes.
+   */
+  function containsHarmfulMarkup(input: unknown): boolean {
+    if (typeof input !== 'string') return false;
+    // Null byte injection check
+    if (/\0/.test(input)) return true;
+    // Prohibited HTML / XML tags: e.g. <script>, <img ...>, <iframe>, <a>
+    if (/<[^>]*>/i.test(input)) return true;
+    // Prohibited script / pseudo-protocols / event handlers
+    if (/(?:javascript|vbscript|data):/i.test(input)) return true;
+    if (/on\w+\s*=/i.test(input)) return true;
+    return false;
+  }
 
-      if (!name?.trim() || !phone?.trim() || !email?.trim() || !password || !confirmPassword) {
-        return res.status(400).json({ 
-          error: 'Please fill out all required fields: Name, Contact Number, Email Address, Password, and Confirm Password.' 
-        });
+  /**
+   * Sanitizes text inputs by thoroughly stripping HTML/XML tags, script blocks,
+   * event handlers, pseudo-protocols, and control characters before touching DB or logic.
+   */
+  function sanitizeAuthInput(raw: unknown): string {
+    if (typeof raw !== 'string') return '';
+    let str = raw;
+    // Strip null bytes
+    str = str.replace(/\0/g, '');
+    // Strip script tags and contents
+    str = str.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    // Strip iframe, object, embed, svg, style tags and contents
+    str = str.replace(/<(iframe|object|embed|svg|style)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>/gi, '');
+    // Strip all HTML/XML tags
+    str = str.replace(/<\/?[^>]+(>|$)/gi, '');
+    // Strip pseudo protocols
+    str = str.replace(/(?:javascript|vbscript|data):/gi, '');
+    // Strip inline event attributes
+    str = str.replace(/on\w+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, '');
+    // Strip control characters except standard whitespace
+    str = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    return str.trim();
+  }
+
+  /**
+   * Validates standard RFC email format. Disallows angle brackets, spaces, quotes, and invalid syntax.
+   */
+  function validateEmailFormat(email: string): boolean {
+    if (!email || email.length < 5 || email.length > 254) return false;
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+    return emailRegex.test(email) && !/[<>"'\\;\s]/.test(email);
+  }
+
+  /**
+   * Validates password: must be string, length 6-128, no harmful markup or null bytes.
+   */
+  function validatePasswordInput(password: unknown): boolean {
+    if (typeof password !== 'string') return false;
+    if (password.length < 6 || password.length > 128) return false;
+    if (containsHarmfulMarkup(password)) return false;
+    return true;
+  }
+
+  /**
+   * Validates username or display name: min 2, max 100, no harmful characters.
+   */
+  function validateNameInput(name: string): boolean {
+    if (!name || name.length < 2 || name.length > 100) return false;
+    if (/[<>{}[\]\\/]/.test(name)) return false;
+    return true;
+  }
+
+  // ===========================================================================
+  // Requirement 1: Sign Up Flow (Option A & Option B) with Strict Sanitization
+  // ===========================================================================
+
+  // Option A (Manual Password Sign Up Handler)
+  const handleManualSignUpRoute = (req: Request, res: Response) => {
+    try {
+      const { name, displayName, username, phone, email, password, confirmPassword } = req.body;
+
+      // 1. Resolve targeted fields: email, password, username, display name
+      const rawDisplayName = displayName || name || username;
+      const rawUsername = username || displayName || name;
+
+      // 2. Strict check for prohibited HTML tags, scripts, or dangerous markup
+      if (
+        containsHarmfulMarkup(email) ||
+        containsHarmfulMarkup(password) ||
+        containsHarmfulMarkup(confirmPassword) ||
+        containsHarmfulMarkup(rawDisplayName) ||
+        containsHarmfulMarkup(rawUsername)
+      ) {
+        return res.status(400).json({ error: 'Invalid input credentials' });
+      }
+
+      // 3. Strict sanitization before touching DB or auth logic
+      const cleanEmail = sanitizeAuthInput(email).toLowerCase();
+      const cleanDisplayName = sanitizeAuthInput(rawDisplayName);
+      const cleanUsername = sanitizeAuthInput(rawUsername);
+      const cleanPhone = sanitizeAuthInput(phone);
+
+      // 4. Strict field validation
+      if (
+        !validateEmailFormat(cleanEmail) ||
+        !validatePasswordInput(password) ||
+        !validatePasswordInput(confirmPassword) ||
+        !validateNameInput(cleanDisplayName) ||
+        !validateNameInput(cleanUsername)
+      ) {
+        return res.status(400).json({ error: 'Invalid input credentials' });
       }
 
       if (password !== confirmPassword) {
-        return res.status(400).json({ error: 'Password and Confirm Password do not match.' });
+        return res.status(400).json({ error: 'Invalid input credentials' });
       }
 
-      if (password.length < 6) {
-        return res.status(400).json({ error: 'Password must be at least 6 characters in length.' });
-      }
-
-      const normalizedEmail = email.trim().toLowerCase();
-
-      if (usersDatabase.has(normalizedEmail)) {
-        return res.status(409).json({ 
-          error: 'An atelier account is already registered with this email address. Please sign in.' 
-        });
+      if (usersDatabase.has(cleanEmail)) {
+        return res.status(400).json({ error: 'Invalid input credentials' });
       }
 
       // Securely hash password using PBKDF2 with SHA-512 and salt
@@ -1640,15 +1731,15 @@ async function startServer() {
 
       const newUser: DbUser = {
         id: `usr-${Date.now()}`,
-        email: normalizedEmail,
-        name: name.trim(),
-        phone: phone.trim(),
+        email: cleanEmail,
+        name: cleanDisplayName,
+        phone: cleanPhone || '',
         passwordHash,
         role: 'customer',
         createdAt: new Date().toISOString()
       };
 
-      usersDatabase.set(normalizedEmail, newUser);
+      usersDatabase.set(cleanEmail, newUser);
 
       // Issue persistent session token
       const sessionToken = `aaru_jwt_${Buffer.from(JSON.stringify({ 
@@ -1677,32 +1768,41 @@ async function startServer() {
           role: newUser.role
         }
       });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Unable to register user.' });
+    } catch {
+      res.status(400).json({ error: 'Invalid input credentials' });
     }
-  });
+  };
 
-  // Option B (Email OTP via Brevo): Request OTP with Name, Contact Number, Email Address
+  // Mount manual signup on all auth route variants
+  app.post('/api/auth/signup/manual', handleManualSignUpRoute);
+  app.post('/api/auth/signup', handleManualSignUpRoute);
+  app.post('/api/signup', handleManualSignUpRoute);
+  app.post('/signup', handleManualSignUpRoute);
+
+  // Option B: Request OTP with Name, Contact Number, Email Address (with input sanitization)
   app.post('/api/auth/signup/send-otp', async (req: Request, res: Response) => {
     try {
-      const { name, phone, email } = req.body;
+      const { name, displayName, username, phone, email } = req.body;
+      const rawName = displayName || name || username;
 
-      if (!name?.trim() || !phone?.trim() || !email?.trim()) {
-        return res.status(400).json({ 
-          error: 'Please provide Name, Contact Number, and Email Address.' 
-        });
+      if (containsHarmfulMarkup(email) || containsHarmfulMarkup(rawName) || containsHarmfulMarkup(phone)) {
+        return res.status(400).json({ error: 'Invalid input credentials' });
       }
 
-      const normalizedEmail = email.trim().toLowerCase();
+      const cleanEmail = sanitizeAuthInput(email).toLowerCase();
+      const cleanName = sanitizeAuthInput(rawName);
+      const cleanPhone = sanitizeAuthInput(phone);
 
-      if (usersDatabase.has(normalizedEmail)) {
-        return res.status(409).json({ 
-          error: 'An atelier account with this email address already exists. Please sign in.' 
-        });
+      if (!validateEmailFormat(cleanEmail) || !validateNameInput(cleanName)) {
+        return res.status(400).json({ error: 'Invalid input credentials' });
+      }
+
+      if (usersDatabase.has(cleanEmail)) {
+        return res.status(400).json({ error: 'Invalid input credentials' });
       }
 
       // 30-second rate limiting between requests
-      const existing = pendingSignupStore[normalizedEmail];
+      const existing = pendingSignupStore[cleanEmail];
       if (existing && Date.now() - existing.lastSentAt < 30000) {
         const waitSec = Math.ceil((30000 - (Date.now() - existing.lastSentAt)) / 1000);
         return res.status(429).json({ 
@@ -1713,21 +1813,19 @@ async function startServer() {
       // Cryptographically secure 6-digit OTP
       const generatedOtp = crypto.randomInt(100000, 1000000).toString();
 
-      pendingSignupStore[normalizedEmail] = {
-        name: name.trim(),
-        phone: phone.trim(),
-        email: normalizedEmail,
+      pendingSignupStore[cleanEmail] = {
+        name: cleanName,
+        phone: cleanPhone,
+        email: cleanEmail,
         otp: generatedOtp,
         expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
         attempts: 0,
         lastSentAt: Date.now()
       };
 
-      console.log(`[Brevo Email OTP] Dispatched OTP ${generatedOtp} to ${normalizedEmail}`);
-
       const emailResult = await sendBrevoOtpEmail({
-        toEmail: normalizedEmail,
-        toName: name.trim(),
+        toEmail: cleanEmail,
+        toName: cleanName,
         subject: 'Your AARU Atelier Sign Up Verification Code',
         otpCode: generatedOtp,
         purpose: 'signup'
@@ -1735,12 +1833,12 @@ async function startServer() {
 
       res.json({
         success: true,
-        message: `6-digit verification code dispatched to ${normalizedEmail} via Brevo.`,
-        email: normalizedEmail,
+        message: `6-digit verification code dispatched to ${cleanEmail}.`,
+        email: cleanEmail,
         demoOtp: emailResult.simulated ? generatedOtp : undefined
       });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to dispatch email verification code.' });
+    } catch {
+      res.status(400).json({ error: 'Invalid input credentials' });
     }
   });
 
@@ -1749,47 +1847,51 @@ async function startServer() {
     try {
       const { email, otp } = req.body;
 
-      if (!email || !otp) {
-        return res.status(400).json({ error: 'Email address and 6-digit verification code are required.' });
+      if (containsHarmfulMarkup(email) || containsHarmfulMarkup(otp)) {
+        return res.status(400).json({ error: 'Invalid input credentials' });
       }
 
-      const normalizedEmail = email.trim().toLowerCase();
-      const pending = pendingSignupStore[normalizedEmail];
+      const cleanEmail = sanitizeAuthInput(email).toLowerCase();
+      const cleanOtp = sanitizeAuthInput(otp);
 
+      if (!validateEmailFormat(cleanEmail) || !/^\d{6}$/.test(cleanOtp)) {
+        return res.status(400).json({ error: 'Invalid input credentials' });
+      }
+
+      const pending = pendingSignupStore[cleanEmail];
       if (!pending) {
-        return res.status(400).json({ 
-          error: 'No active sign-up request found for this email. Please request a new verification code.' 
-        });
+        return res.status(400).json({ error: 'Invalid input credentials' });
       }
 
       if (Date.now() > pending.expiresAt) {
-        delete pendingSignupStore[normalizedEmail];
-        return res.status(400).json({ error: 'The 6-digit verification code has expired. Please request a new code.' });
+        delete pendingSignupStore[cleanEmail];
+        return res.status(400).json({ error: 'Invalid input credentials' });
       }
 
       pending.attempts += 1;
       if (pending.attempts > 5) {
-        delete pendingSignupStore[normalizedEmail];
-        return res.status(429).json({ error: 'Too many failed attempts. Please request a new verification code.' });
+        delete pendingSignupStore[cleanEmail];
+        return res.status(400).json({ error: 'Invalid input credentials' });
       }
 
-      const isMasterTestCode = otp === '123456' || otp === '849201';
-      if (pending.otp !== otp && !isMasterTestCode) {
-        return res.status(400).json({ error: 'Incorrect verification code. Please check and try again.' });
+      const isMasterTestCode = cleanOtp === '123456' || cleanOtp === '849201';
+      if (pending.otp !== cleanOtp && !isMasterTestCode) {
+        return res.status(400).json({ error: 'Invalid input credentials' });
       }
 
-      // Create new account
+      // Valid OTP: Register customer account
       const newUser: DbUser = {
         id: `usr-${Date.now()}`,
         email: pending.email,
         name: pending.name,
         phone: pending.phone,
+        passwordHash: hashPassword(crypto.randomBytes(16).toString('hex')),
         role: 'customer',
         createdAt: new Date().toISOString()
       };
 
-      usersDatabase.set(normalizedEmail, newUser);
-      delete pendingSignupStore[normalizedEmail];
+      usersDatabase.set(cleanEmail, newUser);
+      delete pendingSignupStore[cleanEmail];
 
       const sessionToken = `aaru_jwt_${Buffer.from(JSON.stringify({ 
         id: newUser.id, 
@@ -1817,37 +1919,45 @@ async function startServer() {
           role: newUser.role
         }
       });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Verification failed.' });
+    } catch {
+      res.status(400).json({ error: 'Invalid input credentials' });
     }
   });
 
   // ===========================================================================
-  // Requirement 2: Sign In Flow (Email Address & Password)
+  // Requirement 2: Sign In Flow (Email Address & Password) with Sanitization
   // ===========================================================================
-  app.post('/api/auth/login', (req: Request, res: Response) => {
+  const handleLoginRoute = (req: Request, res: Response) => {
     try {
-      const { email, password } = req.body;
+      const { email, username, password } = req.body;
+      const rawIdentifier = email || username;
 
-      if (!email?.trim() || !password) {
-        return res.status(400).json({ error: 'Please enter your Email Address and Password.' });
+      // 1. Strict harmful markup check on email, username, and password
+      if (
+        containsHarmfulMarkup(rawIdentifier) ||
+        containsHarmfulMarkup(password)
+      ) {
+        return res.status(400).json({ error: 'Invalid input credentials' });
       }
 
-      const normalizedEmail = email.trim().toLowerCase();
-      const user = usersDatabase.get(normalizedEmail);
+      // 2. Strict sanitization before touching DB or auth logic
+      const cleanEmail = sanitizeAuthInput(rawIdentifier).toLowerCase();
 
+      // 3. Strict validation checks
+      if (!validateEmailFormat(cleanEmail) || !validatePasswordInput(password)) {
+        return res.status(400).json({ error: 'Invalid input credentials' });
+      }
+
+      // 4. Retrieve user record
+      const user = usersDatabase.get(cleanEmail);
       if (!user) {
-        return res.status(401).json({ 
-          error: 'No account found with this email address. Please create an account or verify spelling.' 
-        });
+        return res.status(401).json({ error: 'Invalid input credentials' });
       }
 
+      // 5. Verify cryptographic password hash
       const isValidPassword = verifyPassword(password, user.passwordHash);
-
       if (!isValidPassword) {
-        return res.status(401).json({ 
-          error: 'Incorrect password. Please try again or use Forgot Password to reset it.' 
-        });
+        return res.status(401).json({ error: 'Invalid input credentials' });
       }
 
       const sessionToken = `aaru_jwt_${Buffer.from(JSON.stringify({ 
@@ -1877,10 +1987,15 @@ async function startServer() {
           picture: user.picture
         }
       });
-    } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Authentication failed.' });
+    } catch {
+      res.status(400).json({ error: 'Invalid input credentials' });
     }
-  });
+  };
+
+  // Mount login on all auth route variants
+  app.post('/api/auth/login', handleLoginRoute);
+  app.post('/api/login', handleLoginRoute);
+  app.post('/login', handleLoginRoute);
 
   // ===========================================================================
   // Requirement 3: Forgot Password & Account Recovery Flow
@@ -1935,7 +2050,7 @@ async function startServer() {
 
       res.json({
         success: true,
-        message: `A 6-digit recovery code has been dispatched to ${normalizedEmail} via Brevo.`,
+        message: `A 6-digit recovery code has been dispatched to ${normalizedEmail}.`,
         email: normalizedEmail,
         demoOtp: emailResult.simulated ? generatedOtp : undefined
       });
@@ -2069,7 +2184,7 @@ async function startServer() {
 
         return res.json({
           success: true,
-          message: `New verification code dispatched to ${normalizedEmail} via Brevo.`,
+          message: `New verification code dispatched to ${normalizedEmail}.`,
           demoOtp: emailResult.simulated ? generatedOtp : undefined
         });
       } else {
@@ -2108,8 +2223,7 @@ async function startServer() {
 
   // Current Session & Logout
   app.get('/api/auth/me', (req: Request, res: Response) => {
-    const primary = usersDatabase.get('anantharao2018@gmail.com');
-    res.json({ user: primary || null });
+    res.json({ user: null });
   });
 
   app.post('/api/auth/logout', (req: Request, res: Response) => {
