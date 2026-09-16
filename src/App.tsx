@@ -884,8 +884,10 @@ export default function App() {
 
             {/* 5. Shop The Look Editorial Hotspots */}
             <ShopTheLook
-              onSelectLookProduct={navigateToProduct}
               products={products}
+              onSelectProduct={navigateToProduct}
+              onSelectLookProduct={navigateToProduct}
+              onAddToCart={(prod) => handleAddToCart(prod, prod.variants[0], 1)}
               onExploreAllLooks={() => {
                 setActiveUserView('shop-the-look');
                 window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -98,11 +98,11 @@ export const ReturnTrackingTimeline: React.FC<ReturnTrackingTimelineProps> = ({
       },
       {
         step: 'Package Received',
-        label: 'Inspection at Atelier Loom',
+        label: 'Inspection at Workshop',
         completed: currentIdx >= 2,
         current: currentIdx === 2,
         date: currentIdx >= 2 ? 'Inspected' : 'Upcoming',
-        description: 'Artisanal inspection of saree zari, fall, and tags at Varanasi loom.'
+        description: 'Quality inspection of saree zari, fall, and tags at Varanasi workshop.'
       },
       {
         step: 'Refund Processed',
@@ -243,7 +243,7 @@ export const ReturnTrackingTimeline: React.FC<ReturnTrackingTimelineProps> = ({
             Return Tracking: {order.orderNumber}
           </h4>
           <p className="text-xs text-[#736B5E]">
-            Direct courier telemetry connecting your doorstep to the Varanasi Atelier
+            Direct courier tracking connecting your doorstep to our workshop
           </p>
         </div>
 

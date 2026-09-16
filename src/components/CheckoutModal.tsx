@@ -336,7 +336,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         key: keyId,
         amount: orderData.amount,
         currency: orderData.currency || 'INR',
-        name: 'AARU Luxury Atelier',
+        name: 'AARU Luxury Boutique',
         description: `Handcrafted Weave Order (${items.length} ${items.length === 1 ? 'item' : 'items'})`,
         image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=200&q=80',
         order_id: razorpayOrderId,
@@ -473,7 +473,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-[#0F4C5C]" />
             <h3 className="font-serif text-xl font-bold text-[#24211E]">
-              {step === 'confirmed' ? 'Order Confirmed' : 'Bespoke Atelier Checkout'}
+              {step === 'confirmed' ? 'Order Confirmed' : 'Secure Checkout'}
             </h3>
           </div>
           {step !== 'processing' && (
@@ -586,7 +586,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <span>{safeShipping === 0 ? <strong className="text-[#2D5A46]">Complimentary</strong> : `₹${safeShipping.toLocaleString('en-IN')}`}</span>
                 </div>
                 <div className="flex justify-between text-[#736B5E]">
-                  <span>Atelier GST (5%)</span>
+                  <span>Estimated GST (5%)</span>
                   <span>₹{safeTax.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between font-serif text-sm font-bold text-[#0F4C5C] pt-2 border-t border-[#E8DFD5]">
@@ -720,10 +720,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <div className="py-16 text-center space-y-4">
               <div className="w-12 h-12 border-3 border-[#0F4C5C] border-t-transparent rounded-full animate-spin mx-auto" />
               <h4 className="font-serif text-xl font-bold text-[#0F4C5C]">
-                Processing Secure Atelier Transaction...
+                Processing Secure Payment...
               </h4>
               <p className="text-xs text-[#736B5E] max-w-sm mx-auto">
-                Verifying payment signature with banking servers, reserving inventory, and generating your atelier tracking dossier.
+                Verifying payment signature with banking servers, reserving inventory, and generating your order tracking details.
               </p>
             </div>
           )}
@@ -781,7 +781,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   Thank You for Your Patronage
                 </h4>
                 <p className="text-xs text-[#736B5E]">
-                  Your heirloom order has been confirmed and logged in the AARU atelier registry.
+                  Your order has been confirmed and logged in our system.
                 </p>
               </div>
 
@@ -850,7 +850,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   className="px-5 py-2.5 bg-[#2D5A46] text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-2"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  WhatsApp Atelier Support
+                  WhatsApp Support
                 </a>
 
                 <button

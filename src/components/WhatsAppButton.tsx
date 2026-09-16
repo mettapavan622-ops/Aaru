@@ -6,7 +6,7 @@ interface WhatsAppButtonProps {
 }
 
 export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({ 
-  customMessage = "Hello AARU Atelier, I would like to inquire about your curated luxury weaves and bespoke services.",
+  customMessage = "Hello AARU, I would like to inquire about your curated luxury weaves and custom services.",
   className = ""
 }) => {
   const encodedMessage = encodeURIComponent(customMessage);
@@ -19,7 +19,7 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with AARU on WhatsApp"
-      title="Chat with AARU Atelier on WhatsApp"
+      title="Chat with AARU on WhatsApp"
       className={`fixed bottom-6 right-6 z-40 w-14 h-14 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center border-2 border-white/80 group cursor-pointer ${className}`}
     >
       <div className="relative flex items-center justify-center">

@@ -77,12 +77,12 @@ export const FounderStorySection: React.FC<FounderStorySectionProps> = ({ onDisc
                 onClick={onDiscoverStory}
                 className="px-6 py-3 bg-[#0F4C5C] hover:bg-[#E8B4B8] hover:text-black border border-transparent hover:border-[#E8B4B8] text-white text-xs font-semibold uppercase tracking-[0.16em] flex items-center gap-2 shadow-md transition-all cursor-pointer"
               >
-                Discover the Story & Atelier
+                Discover the Story & Studio
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
 
               <a
-                href="https://wa.me/919876543210?text=Hello%20Moni%20Atelier,%20I%20would%20love%20to%20know%20more%20about%20your%20signature%20handloom%20creations."
+                href="https://wa.me/919876543210?text=Hello%20Moni,%20I%20would%20love%20to%20know%20more%20about%20your%20signature%20handloom%20creations."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-6 py-3 border border-[#9C7C38] text-[#9C7C38] hover:bg-[#E8B4B8] hover:text-black hover:border-[#E8B4B8] text-xs font-semibold uppercase tracking-[0.16em] transition-colors cursor-pointer"

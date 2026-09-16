@@ -31,7 +31,7 @@ export const CustomClothingStudio: React.FC = () => {
     { type: 'Bridal Lehenga', desc: '16-kali raw silk skirt with customized can-can and hand-embroidered veil.' },
     { type: 'Anarkali Gown', desc: 'Floor-length Chanderi or georgette ensemble with gota patti borders.' },
     { type: 'Festive Kurta Set', desc: 'Tailored straight-cut or Angrakha silhouette with organza dupatta.' },
-    { type: 'Bespoke Indo-Western', desc: 'Architectural cape drapes, pre-stitched concept sarees, and jackets.' }
+    { type: 'Custom Indo-Western', desc: 'Architectural cape drapes, pre-stitched concept sarees, and jackets.' }
   ];
 
   const fabrics = [
@@ -132,7 +132,7 @@ export const CustomClothingStudio: React.FC = () => {
     }
   };
 
-  const whatsappMessage = `*AARU Atelier Customization Request*
+  const whatsappMessage = `*AARU Studio Customization Request*
 Client: ${formData.customerName || 'Valued Client'}
 Garment: ${formData.garmentType}
 Fabric: ${formData.fabricPreference}
@@ -149,7 +149,7 @@ Special Notes: ${formData.specialNotes || 'None'}`;
         <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#9C7C38]/15 text-[#9C7C38] text-[11px] font-semibold uppercase tracking-[0.2em]">
             <Scissors className="w-3.5 h-3.5" />
-            Haute Couture Atelier
+            Custom Tailoring Studio
           </div>
 
           <h2 className="font-serif text-3xl sm:text-5xl font-bold text-[#0F4C5C]">
@@ -157,7 +157,7 @@ Special Notes: ${formData.specialNotes || 'None'}`;
           </h2>
 
           <p className="text-sm text-[#736B5E] font-light leading-relaxed">
-            Every woman's body has its own cadence. In our bespoke studio, you are not bound by standard charts. Customize your sarees, blouses, lehengas, and gowns crafted to your exact anatomical measurements, fabric choice, and embroidery preferences.
+            Every woman's body has its own cadence. In our custom studio, you are not bound by standard charts. Customize your sarees, blouses, lehengas, and gowns crafted to your exact anatomical measurements, fabric choice, and embroidery preferences.
           </p>
         </div>
 
@@ -165,9 +165,9 @@ Special Notes: ${formData.specialNotes || 'None'}`;
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {[
             { step: '01', title: 'Silhouette Selection', desc: 'Choose from heirloom sarees, structured blouses, bridal lehengas, or festive ensembles.' },
-            { step: '02', title: 'Fabric & Palette', desc: 'Select natural handloom silks, pure organza, or Banarasi weaves with bespoke swatches.' },
-            { step: '03', title: 'Atelier Measurements', desc: 'Provide your precise measurements or book a digital video consultation with our stylist.' },
-            { step: '04', title: 'Atelier Craft & Delivery', desc: 'Hand-cut, assembled, and finished with complimentary trial fittings.' }
+            { step: '02', title: 'Fabric & Palette', desc: 'Select natural handloom silks, pure organza, or Banarasi weaves with personalized swatches.' },
+            { step: '03', title: 'Measurements', desc: 'Provide your precise measurements or book a digital video consultation with our stylist.' },
+            { step: '04', title: 'Handcrafted Assembly & Delivery', desc: 'Hand-cut, assembled, and finished with complimentary trial fittings.' }
           ].map((item) => (
             <div key={item.step} className="p-6 bg-white border border-[#E8DFD5] relative group hover:border-[#0F4C5C]/40 transition-colors">
               <span className="font-serif text-2xl font-bold text-[#9C7C38]/40 block mb-2">{item.step}</span>
@@ -188,7 +188,7 @@ Special Notes: ${formData.specialNotes || 'None'}`;
                 Customization Request Received
               </h3>
               <p className="text-sm text-[#736B5E] max-w-lg mx-auto leading-relaxed">
-                Thank you, <strong className="text-[#24211E]">{formData.customerName}</strong>. Our senior patternmaker and stylist at the AARU atelier will review your measurements and contact you within 24 hours.
+                Thank you, <strong className="text-[#24211E]">{formData.customerName}</strong>. Our senior patternmaker and stylist at AARU will review your measurements and contact you within 24 hours.
               </p>
 
               <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
@@ -199,7 +199,7 @@ Special Notes: ${formData.specialNotes || 'None'}`;
                   className="px-6 py-3 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-2 shadow-md transition-colors"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  Continue Chat on WhatsApp Atelier
+                  Continue Chat on WhatsApp
                 </a>
                 <button
                   type="button"
@@ -474,7 +474,7 @@ Special Notes: ${formData.specialNotes || 'None'}`;
               {/* Step 4: Contact Details & Special Notes */}
               <div className="pt-4 border-t border-[#E8DFD5] space-y-4">
                 <h4 className="font-serif text-lg font-bold text-[#24211E]">
-                  4. Atelier Contact & Special Instructions
+                  4. Contact Details & Special Instructions
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -515,7 +515,7 @@ Special Notes: ${formData.specialNotes || 'None'}`;
 
                 <div>
                   <label className="block text-[11px] font-medium text-[#736B5E] mb-1">
-                    Atelier Notes & Neckline/Sleeve Preference
+                    Special Notes & Neckline/Sleeve Preference
                   </label>
                   <textarea
                     rows={3}
@@ -531,7 +531,7 @@ Special Notes: ${formData.specialNotes || 'None'}`;
               <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#E8DFD5]">
                 <div className="text-left">
                   <p className="text-xs font-semibold text-[#24211E]">
-                    Complimentary Atelier Fitting Consultation
+                    Complimentary Fitting Consultation
                   </p>
                   <p className="text-[11px] text-[#736B5E]">
                     Our master patternmaker reviews all measurements before hand-cutting your ensemble.
@@ -544,7 +544,7 @@ Special Notes: ${formData.specialNotes || 'None'}`;
                   className="w-full sm:w-auto px-9 py-3.5 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-[0.16em] flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer shrink-0"
                 >
                   {isSubmitting ? (
-                    'Recording Atelier Request...'
+                    'Recording Request...'
                   ) : (
                     <>
                       <Send className="w-3.5 h-3.5" />

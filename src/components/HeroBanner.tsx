@@ -53,7 +53,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#F5EFE6] border border-[#D4C7B5] text-[#8C6D37] rounded-none">
               <Sparkles className="w-3.5 h-3.5 text-[#8C6D37]" />
               <span className="text-[10px] sm:text-[11px] font-sans font-semibold tracking-[0.22em] uppercase">
-                Heirloom Textiles • Haute Atelier 2026
+                Heirloom Textiles • Studio Collection 2026
               </span>
             </div>
 
@@ -64,7 +64,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
 
             {/* Body Narrative */}
             <p className="font-sans text-xs sm:text-sm lg:text-base text-[#5C5549] font-light leading-relaxed max-w-xl">
-              At AARU, clothing is not just worn — it becomes the invisible force that completes her. Handcrafted Banarasi kadwa brocades, featherlight organza, and bespoke heirloom drapes crafted with pure silks and natural zari.
+              At AARU, clothing is not just worn — it becomes the invisible force that completes her. Handcrafted Banarasi kadwa brocades, featherlight organza, and custom heirloom drapes crafted with pure silks and natural zari.
             </p>
 
             {/* Action CTAs */}
@@ -100,7 +100,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                 <p className="text-[10px] sm:text-[11px] text-[#736B5E] mt-0.5">Ready-to-Ship Drapes</p>
               </div>
               <div>
-                <p className="text-[11px] sm:text-xs font-bold font-serif text-[#0F4C5C]">Bespoke Atelier</p>
+                <p className="text-[11px] sm:text-xs font-bold font-serif text-[#0F4C5C]">Custom Studio</p>
                 <p className="text-[10px] sm:text-[11px] text-[#736B5E] mt-0.5">Custom Tailoring</p>
               </div>
             </div>

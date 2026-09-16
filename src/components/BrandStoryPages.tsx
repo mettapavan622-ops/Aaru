@@ -65,7 +65,7 @@ export const AboutAaruSection: React.FC<{ onExploreClick?: () => void }> = ({ on
                 className="w-full aspect-[4/5] object-cover shadow-md"
               />
               <div className="p-4 bg-white border border-[#E8DFD5]">
-                <p className="text-[10px] uppercase font-bold tracking-widest text-[#9C7C38]">Varanasi Atelier</p>
+                <p className="text-[10px] uppercase font-bold tracking-widest text-[#9C7C38]">Varanasi Workshop</p>
                 <p className="font-serif text-sm font-semibold text-[#24211E]">Kadwa Brocade Handlooms</p>
               </div>
             </div>
@@ -153,30 +153,30 @@ export const ContactSection: React.FC = () => {
   };
 
   const whatsappInquiryUrl = `https://wa.me/919876543210?text=${encodeURIComponent(
-    `Hello AARU Atelier, My name is ${formState.name || 'Client'}. Inquiry: ${formState.inquiry || 'I would like to consult with an atelier stylist.'}`
+    `Hello AARU Studio, My name is ${formState.name || 'Client'}. Inquiry: ${formState.inquiry || 'I would like to consult with a stylist.'}`
   )}`;
 
   return (
     <section id="contact-us" className="py-20 lg:py-24 bg-[#F5EFE6] border-t border-[#E8DFD5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Atelier Details */}
+          {/* Studio Details */}
           <div className="lg:col-span-5 space-y-6">
             <span className="text-xs font-sans font-medium uppercase tracking-[0.25em] text-[#8C6D37]">
-              Atelier & Salon
+              Studio & Salon
             </span>
             <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#0F4C5C]">
               Connect with AARU
             </h2>
             <p className="text-xs sm:text-sm text-[#5C5549] font-light leading-relaxed">
-              Whether you wish to schedule a private drape consultation at our salon or seek styling guidance for an upcoming wedding, our atelier concierges are at your service.
+              Whether you wish to schedule a private drape consultation at our salon or seek styling guidance for an upcoming wedding, our customer care specialists are at your service.
             </p>
 
             <div className="space-y-4 pt-4 text-xs text-[#24211E]">
               <div className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-[#0F4C5C] shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold">AARU Flagship Atelier & Salon</p>
+                  <p className="font-semibold">AARU Flagship Studio & Salon</p>
                   <p className="text-[#736B5E]">74 Lavelle Road, Richmond Town, Bengaluru, Karnataka 560001</p>
                 </div>
               </div>
@@ -185,7 +185,7 @@ export const ContactSection: React.FC = () => {
                 <Phone className="w-4 h-4 text-[#0F4C5C] shrink-0" />
                 <div>
                   <p className="font-semibold">+91 (80) 4122 8900 / +91 98765 43210</p>
-                  <p className="text-[#736B5E]">Direct atelier telephone line</p>
+                  <p className="text-[#736B5E]">Direct customer care line</p>
                 </div>
               </div>
 
@@ -226,7 +226,7 @@ export const ContactSection: React.FC = () => {
                 <CheckCircle className="w-12 h-12 text-[#2D5A46] mx-auto" />
                 <h3 className="font-serif text-2xl font-bold text-[#0F4C5C]">Inquiry Received</h3>
                 <p className="text-xs text-[#736B5E]">
-                  Thank you for reaching out to AARU. Our atelier stylist will respond to {formState.email} shortly.
+                  Thank you for reaching out to AARU. Our customer care specialist will respond to {formState.email} shortly.
                 </p>
                 <button
                   type="button"
@@ -238,7 +238,7 @@ export const ContactSection: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handleContactSubmit} className="space-y-4">
-                <h3 className="font-serif text-xl font-bold text-[#24211E]">Send an Atelier Inquiry</h3>
+                <h3 className="font-serif text-xl font-bold text-[#24211E]">Send an Inquiry</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[11px] font-medium text-[#736B5E] mb-1">Your Name *</label>
@@ -360,16 +360,16 @@ export const Footer: React.FC<{
             </ul>
           </div>
 
-          {/* Col 3: Client Atelier & Services - 2 cols */}
+          {/* Col 3: Client Studio & Services - 2 cols */}
           <div className="lg:col-span-2 space-y-3">
             <h4 className="font-serif text-sm font-bold tracking-wider text-[#FAF7F2] uppercase">
-              Atelier Services
+              Studio Services
             </h4>
             <ul className="space-y-2.5 text-xs text-[#C4B7A5] font-light">
               <li><button type="button" onClick={() => handleNav('custom-clothing')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Customised Clothing Studio</button></li>
               <li><button type="button" onClick={handleOpenOrders} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Track Order Status</button></li>
               <li><button type="button" onClick={() => handleNav('shop-the-look')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Shop the Lookbook</button></li>
-              <li><a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="hover:text-[#E8B4B8] transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5 text-emerald-400" /> WhatsApp Atelier Stylist</a></li>
+              <li><a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="hover:text-[#E8B4B8] transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5 text-emerald-400" /> WhatsApp Stylist</a></li>
             </ul>
           </div>
 
@@ -443,7 +443,7 @@ export const Footer: React.FC<{
               <li><button type="button" onClick={() => handleNav('about')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">About AARU</button></li>
               <li><button type="button" onClick={() => handleNav('story')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Founder’s Story: Moni</button></li>
               <li><a href="#faqs" className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left block">Frequently Asked Questions</a></li>
-              <li><button type="button" onClick={() => handleNav('contact')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Salon & Atelier Contact</button></li>
+              <li><button type="button" onClick={() => handleNav('contact')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Salon & Studio Contact</button></li>
               <li>
                 <button type="button" onClick={() => handleNav('privacy-policy')} className="text-[#8A7F73] hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">
                   Legal Compliance & GST

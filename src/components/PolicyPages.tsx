@@ -55,7 +55,7 @@ export const PolicyPage: React.FC<PolicyPageProps> = ({
                     Return Eligibility
                   </h2>
                   <p className="text-[#0F4C5C]">
-                    Ready To Ship items may be returned within 7 days of delivery, provided they are unworn, unwashed, and in original packaging with all tags attached. Bespoke and customized garments are non-returnable.
+                    Ready To Ship items may be returned within 7 days of delivery, provided they are unworn, unwashed, and in original packaging with all tags attached. Made-to-measure and customized garments are non-returnable.
                   </p>
                 </section>
 
@@ -160,7 +160,7 @@ export const PolicyPage: React.FC<PolicyPageProps> = ({
                     1. INFORMATION WE COLLECT
                   </h2>
                   <p className="text-[#0F4C5C]">
-                    When you register for an account, we may ask for your contact information, including items such as name, company name, address, email address, and telephone number. If you use our bespoke custom clothing service, we also collect measurement parameters (bust, waist, hips, height) to tailor products specifically for you.
+                    When you register for an account, we may ask for your contact information, including items such as name, company name, address, email address, and telephone number. If you use our personalized custom clothing service, we also collect measurement parameters (bust, waist, hips, height) to tailor products specifically for you.
                   </p>
                 </section>
 
@@ -202,7 +202,7 @@ export const PolicyPage: React.FC<PolicyPageProps> = ({
 
                 <section className="space-y-3">
                   <h2 className="font-serif text-xl sm:text-2xl font-bold uppercase tracking-wide text-[#0F4C5C]">
-                    1. BESPOKE ORDERS AND TAILORING
+                    1. CUSTOM ORDERS AND TAILORING
                   </h2>
                   <p className="text-[#0F4C5C]">
                     By submitting body measurements on our customised clothing platform, you represent that the measurements provided are accurate. Sizing adjustments requested after completion may be subject to additional fabric costs if the sizing variance exceeds standard tolerances.

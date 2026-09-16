@@ -164,7 +164,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
         {/* Breadcrumbs & Header */}
         <div className="mb-8">
           <div className="text-xs uppercase tracking-widest text-[#8C6D37] mb-2 font-medium">
-            Atelier Catalog • {filteredProducts.length} Curated Weaves
+            Product Catalog • {filteredProducts.length} Curated Weaves
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#0F4C5C]">
             {selectedCategory !== 'all' 
@@ -172,8 +172,8 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
               : readyToShipOnly 
                 ? 'Ready to Ship Drapes' 
                 : onSaleOnly 
-                  ? 'Mid-Season Atelier Sale' 
-                  : 'All Atelier Creations'}
+                  ? 'Mid-Season Sale' 
+                  : 'All Handloom Creations'}
           </h1>
           <p className="text-xs sm:text-sm text-[#736B5E] mt-1 font-light max-w-2xl">
             Each drape is hand-woven on heritage pit and jacquard looms, inspected by our senior master weavers, and presented in signature packaging.
@@ -266,7 +266,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
               onChange={(e) => setSortBy(e.target.value as any)}
               className="px-3 py-1.5 bg-[#FAF7F2] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none"
             >
-              <option value="featured">Featured Atelier Edit</option>
+              <option value="featured">Featured Edit</option>
               <option value="price-asc">Price: Low to High</option>
               <option value="price-desc">Price: High to Low</option>
               <option value="newest">Newest Arrivals</option>
@@ -313,7 +313,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
                   )}
                 </button>
                 <p className="text-[11px] text-[#736B5E] tracking-wider">
-                  Showing {displayedProducts.length} of {filteredProducts.length} Atelier Creations
+                  Showing {displayedProducts.length} of {filteredProducts.length} Products
                 </p>
               </div>
             )}

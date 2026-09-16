@@ -88,7 +88,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           <div className="flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-[#0F4C5C]" />
             <h3 className="font-serif text-lg font-bold text-[#24211E]">
-              Atelier Shopping Bag ({items.reduce((s, i) => s + i.quantity, 0)})
+              Shopping Bag ({items.reduce((s, i) => s + i.quantity, 0)})
             </h3>
           </div>
           <button
@@ -128,9 +128,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           {items.length === 0 ? (
             <div className="py-16 text-center space-y-4">
               <ShoppingBag className="w-12 h-12 text-[#D4C7B5] mx-auto" />
-              <p className="font-serif text-lg text-[#24211E]">Your atelier bag is empty</p>
+              <p className="font-serif text-lg text-[#24211E]">Your shopping bag is empty</p>
               <p className="text-xs text-[#736B5E] max-w-xs mx-auto">
-                Explore our handcrafted Banarasi weaves, organza sarees, and bespoke editions.
+                Explore our handcrafted Banarasi weaves, organza sarees, and custom editions.
               </p>
               <button
                 type="button"
@@ -298,7 +298,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               onClick={onProceedToCheckout}
               className="w-full py-3.5 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-[0.16em] flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
             >
-              <span>Proceed to Bespoke Checkout</span>
+              <span>Proceed to Checkout</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

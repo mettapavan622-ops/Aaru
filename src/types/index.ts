@@ -207,7 +207,7 @@ export interface CustomClothingRequest {
   customerName: string;
   customerPhone: string;
   customerEmail: string;
-  garmentType: 'Saree & Blouse' | 'Bridal Lehenga' | 'Anarkali Gown' | 'Festive Kurta Set' | 'Bespoke Indo-Western';
+  garmentType: 'Saree & Blouse' | 'Bridal Lehenga' | 'Anarkali Gown' | 'Festive Kurta Set' | 'Custom Indo-Western' | 'Bespoke Indo-Western';
   fabricPreference: string;
   colorPreference: string;
   measurements: {
@@ -220,7 +220,7 @@ export interface CustomClothingRequest {
     specialNotes?: string;
   };
   budgetRange?: string;
-  status: 'New' | 'Consultation Scheduled' | 'In Atelier' | 'Completed';
+  status: 'New' | 'Consultation Scheduled' | 'In Production' | 'In Workshop' | 'In Atelier' | 'Completed';
   createdAt: string;
 }
 
@@ -276,4 +276,26 @@ export interface User {
   addresses?: Address[];
   password?: string;
   picture?: string;
+}
+
+export interface LookHotspot {
+  id: string;
+  x: number; // percentage from left (0 to 100)
+  y: number; // percentage from top (0 to 100)
+  productId: string;
+  name: string;
+  role: string;
+  price: string;
+}
+
+export interface LookbookItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  image: string;
+  tagline: string;
+  productId: string;
+  productName: string;
+  price: string;
+  hotspots?: LookHotspot[];
 }

@@ -240,7 +240,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       }
 
       const redirectNotice = authenticatedUser.role === 'admin'
-        ? 'Welcome Atelier Director! Redirecting to Admin Dashboard...'
+        ? 'Welcome Store Administrator! Redirecting to Admin Dashboard...'
         : 'Signed in successfully. Redirecting to Customer Storefront...';
 
       setSuccessToast(data.message || redirectNotice);
@@ -647,7 +647,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             A Woman’s Sixth Element
           </p>
           <p className="text-[9px] tracking-[0.2em] text-[#736B5E] uppercase mt-0.5">
-            హైదరాబాద్ • బెంగళూరు • Global Luxury Atelier
+            హైదరాబాద్ • బెంగళూరు • Luxury Studio
           </p>
         </div>
 
@@ -794,7 +794,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
             <div className="text-center pt-2">
               <p className="text-xs text-[#736B5E]">
-                New to AARU Atelier?{' '}
+                New to AARU?{' '}
                 <button
                   type="button"
                   onClick={() => handleSwitchScreen('signup')}
@@ -982,7 +982,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   ) : (
                     <>
                       <ShieldCheck className="w-4 h-4" />
-                      <span>Create Atelier Account</span>
+                      <span>Create Account</span>
                     </>
                   )}
                 </button>
@@ -1195,7 +1195,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
             <div className="text-center pt-2">
               <p className="text-xs text-[#736B5E]">
-                Already have an atelier account?{' '}
+                Already have an account?{' '}
                 <button
                   type="button"
                   onClick={() => handleSwitchScreen('login')}
@@ -1217,7 +1217,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             {forgotStep === 'request-email' && (
               <form onSubmit={handleForgotRequestOtp} className="space-y-4 animate-in fade-in duration-150">
                 <p className="text-xs text-[#5C5549] leading-relaxed">
-                  Enter your registered atelier email address. We will dispatch a secure 6-digit recovery code to your inbox.
+                  Enter your registered email address. We will dispatch a secure 6-digit recovery code to your inbox.
                 </p>
 
                 <div>
@@ -1374,7 +1374,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             {forgotStep === 'reset-password' && (
               <form onSubmit={handleForgotResetPassword} className="space-y-4 animate-in fade-in duration-150">
                 <p className="text-xs text-[#5C5549] leading-relaxed">
-                  Your code has been verified. Create a new strong password for your atelier account.
+                  Your code has been verified. Create a new strong password for your account.
                 </p>
 
                 <div>
@@ -1463,7 +1463,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                     Password Successfully Reset
                   </h3>
                   <p className="text-xs text-[#5C5549] mt-1.5 leading-relaxed">
-                    Your atelier account password has been updated in the database. You may now sign in using your new password.
+                    Your account password has been updated in the database. You may now sign in using your new password.
                   </p>
                 </div>
                 <button
@@ -1490,7 +1490,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               onClick={onContinueAsGuest}
               className="text-xs font-semibold text-[#0F4C5C] hover:text-[#0b3844] hover:underline cursor-pointer uppercase tracking-wider inline-flex items-center gap-1"
             >
-              <span>Explore Atelier as Guest</span>
+              <span>Explore Store as Guest</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

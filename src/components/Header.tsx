@@ -215,7 +215,7 @@ export const Header: React.FC<HeaderProps> = ({
               {searchResults.length > 0 ? (
                 <div>
                   <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#8C6D37]">
-                    Matching Atelier Creations ({searchResults.length})
+                    Matching Products ({searchResults.length})
                   </div>
                   {searchResults.map(prod => (
                     <div
@@ -326,7 +326,7 @@ export const Header: React.FC<HeaderProps> = ({
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-serif font-bold text-[#24211E] truncate">{currentUser.name}</p>
                           <span className="inline-block px-1.5 py-0.5 text-[9px] font-sans font-semibold tracking-wider uppercase bg-[#0F4C5C]/10 text-[#0F4C5C] mt-0.5">
-                            {currentUser.role === 'admin' ? 'Atelier Administrator' : 'Privilege Client'}
+                            {currentUser.role === 'admin' ? 'Store Administrator' : 'Privilege Client'}
                           </span>
                         </div>
                       </div>
@@ -364,7 +364,7 @@ export const Header: React.FC<HeaderProps> = ({
                         >
                           <span className="flex items-center gap-2.5">
                             <SlidersHorizontal className="w-4 h-4 text-[#9C7C38]" />
-                            <span>Atelier Admin Dashboard</span>
+                            <span>Admin Dashboard</span>
                           </span>
                           <ArrowRight className="w-3.5 h-3.5 text-[#9C7C38]" />
                         </button>
@@ -408,10 +408,10 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="p-4 bg-[#FAF7F2]">
                       <div className="flex items-center gap-2 mb-1">
                         <UserIcon className="w-4 h-4 text-[#0F4C5C]" />
-                        <p className="text-xs font-serif font-bold text-[#24211E] tracking-wide">Welcome to AARU Atelier</p>
+                        <p className="text-xs font-serif font-bold text-[#24211E] tracking-wide">Welcome to AARU</p>
                       </div>
                       <p className="text-[11px] text-[#736B5E] leading-relaxed">
-                        Sign in to track orders in real-time or create an account for bespoke consultations.
+                        Sign in to track orders in real-time or create an account for personalized styling consultations.
                       </p>
                     </div>
 
@@ -942,7 +942,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-full min-h-[44px] px-4 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4" />
-                <span>WhatsApp Atelier Concierge</span>
+                <span>WhatsApp Customer Care</span>
               </a>
 
               {currentUser?.role === 'admin' && (
@@ -956,7 +956,7 @@ export const Header: React.FC<HeaderProps> = ({
                   className="w-full min-h-[44px] px-4 bg-[#9C7C38] text-white hover:bg-[#85672A] text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
                   <SlidersHorizontal className="w-4 h-4" />
-                  <span>Atelier Admin Dashboard</span>
+                  <span>Admin Dashboard</span>
                 </button>
               )}
             </div>

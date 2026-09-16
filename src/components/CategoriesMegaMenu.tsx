@@ -64,7 +64,7 @@ export const CategoriesMegaMenu: React.FC<CategoriesMegaMenuProps> = ({
         <div className="flex flex-wrap items-center justify-between pb-3.5 border-b border-[#E8DFD5] mb-5 gap-3">
           <div className="flex items-center gap-3">
             <span className="text-[11px] font-sans font-semibold tracking-[0.25em] uppercase text-[#8C6D37]">
-              Atelier Collections Showcase
+              Curated Collections Showcase
             </span>
             <span className="h-3 w-[1px] bg-[#D4C7B5]" />
             <span className="text-xs text-[#5C5549] hidden sm:inline">
@@ -94,7 +94,7 @@ export const CategoriesMegaMenu: React.FC<CategoriesMegaMenuProps> = ({
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-4 h-4 text-[#0F4C5C]" />
                 <span className="text-xs font-serif font-bold uppercase tracking-wider text-[#24211E]">
-                  Shop Atelier Curations
+                  Shop Curated Pieces
                 </span>
               </div>
               <button
@@ -223,7 +223,7 @@ export const CategoriesMegaMenu: React.FC<CategoriesMegaMenuProps> = ({
 
                     <div>
                       <span className="text-[9px] text-[#8C6D37] uppercase tracking-wider font-medium block">
-                        {prod.collection || 'AARU Atelier'}
+                        {prod.collection || 'AARU Collection'}
                       </span>
                       <h4 className="font-serif text-xs font-bold text-[#24211E] line-clamp-1 group-hover:text-[#0F4C5C]">
                         {prod.title}
@@ -274,7 +274,7 @@ export const CategoriesMegaMenu: React.FC<CategoriesMegaMenuProps> = ({
                 <div className="flex items-center gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-[#0F4C5C] shrink-0" />
                   <div>
-                    <p className="text-xs font-serif font-bold text-[#24211E]">Bespoke Moni Atelier Tailoring</p>
+                    <p className="text-xs font-serif font-bold text-[#24211E]">Custom Moni Studio Tailoring</p>
                     <p className="text-[11px] text-[#5C5549]">Work directly with Moni on bridal & festive drapes tailored to your measurements.</p>
                   </div>
                 </div>

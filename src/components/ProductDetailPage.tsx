@@ -62,7 +62,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
       return [{
         id: existing?.id || `v-${product.id}-free`,
         size: 'Free Size',
-        color: existing?.color || 'Atelier Silk',
+        color: existing?.color || 'Pure Silk',
         colorCode: existing?.colorCode || '#0F4C5C',
         inventory: Math.max(existing?.inventory ?? 6, 4),
         sku: existing?.sku || `${product.id.toUpperCase()}-FS`,
@@ -86,7 +86,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
       return {
         id: `v-${product.id}-${sz.toLowerCase()}`,
         size: sz,
-        color: baseVariant?.color || 'Atelier Pure Silk',
+        color: baseVariant?.color || 'Pure Handloom Silk',
         colorCode: baseVariant?.colorCode || '#0F4C5C',
         inventory: 4 + ((idx * 2) % 5),
         sku: `${baseSkuPrefix}-${sz}`,
@@ -141,7 +141,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     setTimeout(() => setAddedAnimation(false), 2000);
   };
 
-  const whatsappInquiryMessage = `Hello AARU Atelier, I am inquiring about the ${product.title} (SKU: ${selectedVariant.sku}, Size: ${selectedVariant.size}). Price: ₹${(product.salePrice || product.price).toLocaleString('en-IN')}. Is this available for custom draping consultation?`;
+  const whatsappInquiryMessage = `Hello AARU Studio, I am inquiring about the ${product.title} (SKU: ${selectedVariant.sku}, Size: ${selectedVariant.size}). Price: ₹${(product.salePrice || product.price).toLocaleString('en-IN')}. Is this available for styling consultation?`;
   const whatsappUrl = `https://wa.me/919876543210?text=${encodeURIComponent(whatsappInquiryMessage)}`;
 
   const toggleAccordion = (id: string) => {
@@ -189,24 +189,24 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
               ))}
             </div>
 
-            {/* Main Stage View */}
+            {/* Main Stage View - Clean High-Resolution Display */}
             <div className="flex-1 relative aspect-[3/4] overflow-hidden bg-[#F5EFE6] border border-[#E8DFD5] shadow-sm">
               <img
                 src={product.images[selectedImageIndex] || product.images[0]}
                 alt={product.title}
-                className="w-full h-full object-cover object-center transition-all duration-500"
+                className="w-full h-full object-cover object-center"
               />
 
               {/* Status Badges */}
-              <div className="absolute top-4 left-4 flex flex-col gap-2">
+              <div className="absolute top-4 left-4 flex flex-col gap-2 pointer-events-none z-10">
                 {product.isReadyToShip && (
-                  <span className="inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold tracking-wider uppercase bg-[#2D5A46] text-white">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 text-[11px] font-semibold tracking-wider uppercase bg-[#2D5A46] text-white shadow-xs">
                     <Sparkles className="w-3 h-3 text-emerald-300" />
                     Ready to Ship
                   </span>
                 )}
                 {product.isOnSale && discountPercent > 0 && (
-                  <span className="px-2.5 py-1 text-[11px] font-bold tracking-wider uppercase bg-[#C08081] text-white">
+                  <span className="px-2.5 py-1 text-[11px] font-bold tracking-wider uppercase bg-[#C08081] text-white shadow-xs">
                     Save {discountPercent}%
                   </span>
                 )}
@@ -268,7 +268,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   className="text-xs font-semibold text-[#0F4C5C] hover:text-[#C08081] transition-colors underline flex items-center gap-1 cursor-pointer"
                 >
                   <Ruler className="w-3.5 h-3.5" />
-                  Atelier Size Guide
+                  Size Guide
                 </button>
               </div>
 
@@ -301,7 +301,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 <span>SKU: {selectedVariant.sku}</span>
                 <span className={`font-semibold ${selectedVariant.inventory > 0 ? 'text-[#2D5A46]' : 'text-rose-600'}`}>
                   {selectedVariant.inventory > 0 
-                    ? `In Stock (${selectedVariant.inventory} units in atelier)` 
+                    ? `In Stock (${selectedVariant.inventory} units available)` 
                     : 'Out of Stock / Made to Order'}
                 </span>
               </div>
@@ -345,7 +345,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   {addedAnimation ? (
                     <>
                       <Check className="w-4 h-4 text-emerald-200" />
-                      Added to Atelier Bag
+                      Added to Bag
                     </>
                   ) : (
                     <>
@@ -545,7 +545,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             >
               ✕
             </button>
-            <h3 className="font-serif text-2xl font-bold text-[#0F4C5C] mb-2">AARU Atelier Size Guide</h3>
+            <h3 className="font-serif text-2xl font-bold text-[#0F4C5C] mb-2">AARU Size Guide</h3>
             <p className="text-xs text-[#736B5E] mb-6 font-light">
               All our standard silhouettes adhere to the following measurements in inches. For custom tailoring, visit our Customised Clothing studio.
             </p>

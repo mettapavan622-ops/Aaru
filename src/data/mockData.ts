@@ -1,15 +1,15 @@
-import { Product, Category, Collection, Order, PromoCode, AnnouncementSettings } from '../types';
+import { Product, Category, Collection, Order, PromoCode, AnnouncementSettings, LookbookItem } from '../types';
 
 export const INITIAL_ANNOUNCEMENT: AnnouncementSettings = {
   text: "Festive Heirloom Edit: Complimentary worldwide express shipping on orders over ₹15,000",
-  headline: "Exclusive Atelier Festive Sale: Up to 25% Off Handloom Heirloom Weaves",
+  headline: "Exclusive Festive Sale: Up to 25% Off Handloom Heirloom Weaves",
   discountCode: "FESTIVE25",
   subtext: "Complimentary worldwide express shipping on orders over ₹15,000 | Code: FESTIVE25",
   linkText: "Explore Now",
   linkUrl: "#collections",
   isActive: true,
   isSaleActive: true,
-  saleHighlight: "Mid-Season Atelier Sale: Up to 25% off Curated Weaves"
+  saleHighlight: "Mid-Season Sale: Up to 25% off Curated Weaves"
 };
 
 export const CATEGORIES: Category[] = [
@@ -25,7 +25,7 @@ export const CATEGORIES: Category[] = [
     id: 'cat-lehengas',
     name: 'Lehengas',
     slug: 'lehengas',
-    description: 'Bespoke bridal and ceremonial lehengas with artisanal hand-embroidered kalis.',
+    description: 'Custom bridal and ceremonial lehengas with artisanal hand-embroidered kalis.',
     image: 'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?auto=format&fit=crop&w=800&q=85',
     itemCount: 8
   },
@@ -89,7 +89,7 @@ export const CATEGORIES: Category[] = [
     id: 'cat-customized-clothing',
     name: 'Customized Clothing',
     slug: 'customized-clothing',
-    description: 'Bespoke couture tailored to your exact measurements, color palette, and drape.',
+    description: 'Custom couture tailored to your exact measurements, color palette, and drape.',
     image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=85',
     itemCount: 8
   }
@@ -156,7 +156,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     careInstructions: 'Dry clean only. Store wrapped in unbleached muslin. Protect from moisture and direct sunlight.',
     fitAndSizeInfo: 'Length: 5.5 meters, Width: 46 inches. Includes an unstitched contrast blouse piece of 0.9 meters.',
     shippingPolicy: 'Ready to Ship: Dispatched within 24 hours. Complimentary express courier across India; 4-6 business days globally.',
-    returnPolicy: 'Eligible for return or exchange within 7 days of delivery in pristine, unworn condition with atelier tags intact.',
+    returnPolicy: 'Eligible for return or exchange within 7 days of delivery in pristine, unworn condition with original tags intact.',
     images: [
       'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1000&q=85',
       'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1000&q=85',
@@ -213,7 +213,7 @@ export const INITIAL_PRODUCTS: Product[] = [
   },
   {
     id: 'prod-003',
-    title: 'Atelier Moni Six-Fold Midnight Kanjeevaram',
+    title: 'Moni Six-Fold Midnight Kanjeevaram',
     subtitle: 'Signature edition woven personally with Moni’s proprietary draft',
     slug: 'atelier-moni-six-fold-midnight-kanjeevaram',
     category: 'Sarees',
@@ -241,7 +241,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     occasion: 'Weddings & Royal Celebrations',
     isFeatured: true,
     seo: {
-      metaTitle: 'Atelier Moni Six-Fold Midnight Kanjeevaram | AARU',
+      metaTitle: 'Moni Six-Fold Midnight Kanjeevaram | AARU',
       metaDescription: 'Signature edition Kanjeevaram saree personally supervised by founder Moni.',
       keywords: ['Kanjeevaram Silk', 'Moni Saree', 'AARU Sixth Element']
     },
@@ -303,7 +303,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     craft: 'Traditional Marodi Embroidery & Hand Zardozi',
     careInstructions: 'Professional wedding gown preservation and dry clean only.',
     fitAndSizeInfo: 'Semi-stitched skirt with customizable waist up to 42 inches. Unstitched corset blouse piece.',
-    shippingPolicy: 'Made to Order: Delivered within 3 weeks. Dedicated atelier concierge tracking.',
+    shippingPolicy: 'Made to Order: Delivered within 3 weeks. Dedicated customer care tracking.',
     returnPolicy: 'Customized & bridal orders are final sale with complimentary fittings included.',
     images: [
       'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?auto=format&fit=crop&w=1000&q=85',
@@ -318,7 +318,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       { id: 'v-005-6', size: 'XXL', color: 'Royal Crimson', colorCode: '#7A1C28', inventory: 2, sku: 'AARU-LEH-005-XXL', isAvailable: true }
     ],
     totalInventory: 18,
-    tags: ['Bridal', 'Bespoke', 'Heirloom'],
+    tags: ['Bridal', 'Custom', 'Heirloom'],
     occasion: 'Weddings & Bridal Receptions',
     isFeatured: false,
     seo: {
@@ -376,7 +376,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     isReadyToShip: true,
     description: 'An architectural fusion of effortless gown draping and heritage saree elegance. Tailored with a zip-up pleated skirt and integrated shoulder pallu in hammered silk-crepe.',
     fabric: 'Hammered Silk-Crepe & Georgette',
-    craft: 'Precision Atelier Draping & Cutwork Embroidery',
+    craft: 'Precision Draping & Cutwork Embroidery',
     careInstructions: 'Dry clean only. Steam press.',
     fitAndSizeInfo: 'Tailored fit at waist with free-flowing drape. Concealed side zipper.',
     shippingPolicy: 'Ready to Ship: Dispatched within 24 hours.',
@@ -482,7 +482,7 @@ export const INITIAL_PRODUCTS: Product[] = [
   },
   {
     id: 'prod-010',
-    title: 'Bespoke Atelier Bridal Couturier Suite',
+    title: 'Custom Bridal Couturier Suite',
     subtitle: 'Made-to-measure bridal silhouette with personalized monogramming',
     slug: 'bespoke-atelier-bridal-couturier-suite',
     category: 'Customized Clothing',
@@ -490,12 +490,12 @@ export const INITIAL_PRODUCTS: Product[] = [
     price: 65000,
     isOnSale: false,
     isReadyToShip: false,
-    description: 'A completely bespoke couture commission designed directly with founder Moni. Hand-dyed pure silks, custom kalis, hand-embroidered personal vows or motifs, and tailored fitting consultations.',
+    description: 'A completely custom couture commission designed directly with founder Moni. Hand-dyed pure silks, custom kalis, hand-embroidered personal vows or motifs, and tailored fitting consultations.',
     fabric: 'Client Selected Heritage Pure Silk & Hand-Woven Zari',
     craft: 'Zardozi, Marodi & Aari Hand Needlework',
-    careInstructions: 'Atelier preservation pack included.',
+    careInstructions: 'Preservation pack included.',
     fitAndSizeInfo: 'Precision tailored to 12 distinct body measurements.',
-    shippingPolicy: 'Handcrafted in 4-6 weeks with priority concierge dispatch.',
+    shippingPolicy: 'Handcrafted in 4-6 weeks with priority dispatch.',
     returnPolicy: 'Includes unlimited private salon alterations.',
     images: [
       'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=85',
@@ -505,13 +505,13 @@ export const INITIAL_PRODUCTS: Product[] = [
       { id: 'v-010-1', size: 'Custom', color: 'Deep Peacock Emerald', colorCode: '#0F4C5C', inventory: 10, sku: 'AARU-CUST-010-BESPOKE', isAvailable: true }
     ],
     totalInventory: 10,
-    tags: ['Custom Made', 'Bespoke Couture', 'Bridal Suite'],
+    tags: ['Custom Made', 'Custom Couture', 'Bridal Suite'],
     occasion: 'Wedding Day & Royal Ceremonies',
     isFeatured: false,
     seo: {
-      metaTitle: 'Bespoke Atelier Bridal Couturier Suite | AARU',
+      metaTitle: 'Custom Bridal Couturier Suite | AARU',
       metaDescription: 'Personalized bridal couture tailored to your measurements by AARU.',
-      keywords: ['Customized Clothing', 'Bespoke Lehenga', 'AARU Couture']
+      keywords: ['Customized Clothing', 'Custom Lehenga', 'AARU Couture']
     },
     createdAt: '2026-09-09T09:00:00Z'
   },
@@ -587,7 +587,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     isFeatured: true,
     seo: {
       metaTitle: 'Amrapali Hand-Painted Kalamkari Silk Saree | AARU',
-      metaDescription: 'Authentic Kalamkari hand-painted silk saree by AARU Atelier.',
+      metaDescription: 'Authentic Kalamkari hand-painted silk saree by AARU.',
       keywords: ['Kalamkari Saree', 'Hand Painted Silk', 'AARU Heritage']
     },
     createdAt: '2026-09-10T10:00:00Z'
@@ -676,7 +676,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     salePrice: 9800,
     isOnSale: true,
     isReadyToShip: true,
-    description: 'Finest handloom silk yardage woven in Varanasi on traditional pit looms. Ideal for bespoke lehengas, achkans, and tailored festive silhouettes.',
+    description: 'Finest handloom silk yardage woven in Varanasi on traditional pit looms. Ideal for custom lehengas, achkans, and tailored festive silhouettes.',
     fabric: '100% Pure Mulberry Silk (4-ply)',
     craft: 'Plain Handloom Weave with Subtle Luster',
     careInstructions: 'Dry clean only.',
@@ -691,11 +691,11 @@ export const INITIAL_PRODUCTS: Product[] = [
     ],
     totalInventory: 15,
     tags: ['Silk Yardage', 'Pure Mulberry', 'Custom Tailoring'],
-    occasion: 'Bespoke Couture Design & Celebratory Tailoring',
+    occasion: 'Custom Couture Design & Celebratory Tailoring',
     isFeatured: false,
     seo: {
       metaTitle: 'Vaidehi Pure Mulberry Silk Yardage | AARU',
-      metaDescription: 'Raw handloom pure silk yardage for bespoke couture by AARU.',
+      metaDescription: 'Raw handloom pure silk yardage for custom couture by AARU.',
       keywords: ['Silk Fabric', 'Mulberry Silk', 'Custom Fabric']
     },
     createdAt: '2026-09-13T09:00:00Z'
@@ -775,11 +775,11 @@ export const INITIAL_ORDERS: Order[] = [
     trackingNumber: 'BD-771239841IN',
     timeline: [
       { status: 'Confirmed', label: 'Order Confirmed', date: '04 Sep 2026, 10:15 AM', completed: true },
-      { status: 'Processing', label: 'Atelier Inspection & Packing', date: '05 Sep 2026, 02:30 PM', completed: true },
+      { status: 'Processing', label: 'Quality Inspection & Packing', date: '05 Sep 2026, 02:30 PM', completed: true },
       { status: 'Shipped', label: 'Dispatched via Blue Dart', date: '06 Sep 2026, 09:00 AM', completed: true },
       { status: 'Delivered', label: 'Delivered to Recipient', date: '08 Sep 2026, 04:20 PM', completed: true },
       { status: 'Return Requested', label: 'Return Request Submitted', date: '11 Sep 2026, 11:30 AM', completed: true },
-      { status: 'Return Approved', label: 'Return Approved by Atelier Admin', date: '12 Sep 2026, 03:00 PM', completed: true, current: true, description: 'Return authorized by Atelier Director Moni. Reverse pickup scheduled with Blue Dart Luxury Express.' }
+      { status: 'Return Approved', label: 'Return Approved by Store Admin', date: '12 Sep 2026, 03:00 PM', completed: true, current: true, description: 'Return authorized by Director Moni. Reverse pickup scheduled with Blue Dart Luxury Express.' }
     ],
     canCancel: false,
     canReturn: false,
@@ -800,7 +800,7 @@ export const INITIAL_ORDERS: Order[] = [
       reverseTrackingNumber: 'BD-REV-89420IN',
       refundAmount: 28006,
       refundReferenceId: 'REF-89420-UTR',
-      adminNote: 'Return authorized by Atelier Director Moni. Blue Dart reverse collection booked.',
+      adminNote: 'Return authorized by Director Moni. Blue Dart reverse collection booked.',
       createdAt: '2026-09-11T11:30:00Z',
       updatedAt: '2026-09-12T15:00:00Z',
       items: [
@@ -853,7 +853,7 @@ export const INITIAL_ORDERS: Order[] = [
     trackingNumber: 'BD-884219482IN',
     timeline: [
       { status: 'Confirmed', label: 'Order Confirmed', date: '09 Sep 2026, 11:20 AM', completed: true },
-      { status: 'Processing', label: 'Atelier Inspection & Packing', date: '10 Sep 2026, 03:45 PM', completed: true },
+      { status: 'Processing', label: 'Quality Inspection & Packing', date: '10 Sep 2026, 03:45 PM', completed: true },
       { status: 'Shipped', label: 'Dispatched via Blue Dart Luxury', date: '11 Sep 2026, 09:10 AM', completed: true, current: true, description: 'Package in transit to delivery hub: Bengaluru Central.' },
       { status: 'Out for Delivery', label: 'Out for Delivery', completed: false, description: 'Expected delivery by tomorrow afternoon.' },
       { status: 'Delivered', label: 'Delivered to Recipient', completed: false }
@@ -870,7 +870,7 @@ export const INITIAL_PROMOS: PromoCode[] = [
   { code: 'FESTIVE20', discountPercent: 20, minOrderValue: 35000, description: '20% off high-festive celebratory weaves', isActive: true }
 ];
 
-export const LOOKBOOK_ITEMS = [
+export const LOOKBOOK_ITEMS: LookbookItem[] = [
   {
     id: 'look-1',
     title: 'The Sovereign Drape',
@@ -879,7 +879,36 @@ export const LOOKBOOK_ITEMS = [
     tagline: 'An ode to timeless grace',
     productId: 'prod-001',
     productName: 'Kavya Emerald Banarasi Tissue Saree',
-    price: '₹28,900'
+    price: '₹28,900',
+    hotspots: [
+      {
+        id: 'hs-1-1',
+        x: 52,
+        y: 62,
+        productId: 'prod-001',
+        name: 'Kavya Emerald Banarasi Tissue Saree',
+        role: 'Primary Heirloom Drape',
+        price: '₹28,900'
+      },
+      {
+        id: 'hs-1-2',
+        x: 48,
+        y: 26,
+        productId: 'prod-016',
+        name: 'Meenakari Antique Temple Choker Ensemble',
+        role: 'Heritage Temple Jewelry',
+        price: '₹18,500'
+      },
+      {
+        id: 'hs-1-3',
+        x: 35,
+        y: 45,
+        productId: 'prod-015',
+        name: 'Vaidehi Pure Mulberry Silk Yardage',
+        role: 'Custom Blouse Fabric',
+        price: '₹9,800'
+      }
+    ]
   },
   {
     id: 'look-2',
@@ -889,17 +918,75 @@ export const LOOKBOOK_ITEMS = [
     tagline: 'Ethereal lightness for twilight celebrations',
     productId: 'prod-002',
     productName: 'Noor Pale Rose Organza Saree',
-    price: '₹26,800'
+    price: '₹26,800',
+    hotspots: [
+      {
+        id: 'hs-2-1',
+        x: 52,
+        y: 58,
+        productId: 'prod-002',
+        name: 'Noor Pale Rose Organza Saree',
+        role: 'Tissue Organza Drape',
+        price: '₹26,800'
+      },
+      {
+        id: 'hs-2-2',
+        x: 46,
+        y: 24,
+        productId: 'prod-008',
+        name: 'Royal Heritage Kundan Polki Necklace',
+        role: 'Imperial Polki Jewelry',
+        price: '₹48,000'
+      },
+      {
+        id: 'hs-2-3',
+        x: 28,
+        y: 68,
+        productId: 'prod-010',
+        name: 'Zardozi Embroidered Silk Potli',
+        role: 'Artisan Potli',
+        price: '₹6,500'
+      }
+    ]
   },
   {
     id: 'look-3',
-    title: 'The Atelier Legacy',
+    title: 'The Studio Legacy',
     subtitle: 'Six-Fold Midnight Kanjeevaram with handcrafted bullion tassels',
     image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1200&q=85',
     tagline: 'Precision engineered by founder Moni',
     productId: 'prod-003',
-    productName: 'Atelier Moni Six-Fold Midnight Kanjeevaram',
-    price: '₹39,500'
+    productName: 'Moni Six-Fold Midnight Kanjeevaram',
+    price: '₹39,500',
+    hotspots: [
+      {
+        id: 'hs-3-1',
+        x: 54,
+        y: 62,
+        productId: 'prod-003',
+        name: 'Moni Six-Fold Midnight Kanjeevaram',
+        role: 'Six-Fold Pure Silk Kanjeevaram',
+        price: '₹39,500'
+      },
+      {
+        id: 'hs-3-2',
+        x: 51,
+        y: 22,
+        productId: 'prod-009',
+        name: 'Temple Carved Jhumkas in 22K Gold Finish',
+        role: 'Carved 22K Gold Jhumkas',
+        price: '₹12,500'
+      },
+      {
+        id: 'hs-3-3',
+        x: 36,
+        y: 44,
+        productId: 'prod-014',
+        name: 'Chandrika Metallic Silver Tissue Saree',
+        role: 'Silver Tissue Layering Stole',
+        price: '₹28,500'
+      }
+    ]
   }
 ];
 
@@ -907,7 +994,7 @@ export const FAQS = [
   {
     category: 'Ordering & Customisation',
     question: 'How does AARU’s Customised Clothing service work?',
-    answer: 'Our bespoke atelier service allows you to customize sarees, bridal lehengas, Anarkali gowns, and blouses. After submitting your measurements and fabric choices online, our master patternmaker will review your specifications. You can also chat directly with our atelier stylist via WhatsApp for consultations and embroidery samples.'
+    answer: 'Our custom studio service allows you to customize sarees, bridal lehengas, Anarkali gowns, and blouses. After submitting your measurements and fabric choices online, our master patternmaker will review your specifications. You can also chat directly with our stylist via WhatsApp for consultations and embroidery samples.'
   },
   {
     category: 'Fabric & Craft',
@@ -917,7 +1004,7 @@ export const FAQS = [
   {
     category: 'Shipping & Delivery',
     question: 'What is the dispatch timeline for Ready to Ship items?',
-    answer: 'Items tagged "Ready to Ship" and "Sarees – Ready to Ship" are already inspected, finished with complimentary fall and pico, and packaged in our atelier. They are dispatched within 24 to 48 hours via express courier with real-time tracking.'
+    answer: 'Items tagged "Ready to Ship" and "Sarees – Ready to Ship" are already inspected, finished with complimentary fall and pico, and packaged in our studio. They are dispatched within 24 to 48 hours via express courier with real-time tracking.'
   },
   {
     category: 'Payments & Security',
@@ -927,7 +1014,7 @@ export const FAQS = [
   {
     category: 'Returns & Alterations',
     question: 'What is AARU’s exchange and return policy?',
-    answer: 'Unworn catalog items with security tags intact can be returned or exchanged within 7 days of receipt. Made-to-measure customized clothing and bridal pieces include complimentary fitting adjustments at our atelier.'
+    answer: 'Unworn catalog items with security tags intact can be returned or exchanged within 7 days of receipt. Made-to-measure customized clothing and bridal pieces include complimentary fitting adjustments at our studio.'
   }
 ];
 
