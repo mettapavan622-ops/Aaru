@@ -435,13 +435,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           <div className="bg-white border border-[#E8DFD5] p-5 shadow-xs">
             <p className="text-[10px] uppercase font-bold tracking-widest text-[#8C6D37]">Active Customer Orders</p>
-            <p className="font-serif text-3xl font-bold text-[#24211E] mt-1">{orders.length}</p>
+            <p className="font-sans text-3xl font-bold text-[#24211E] mt-1">{orders.length}</p>
             <p className="text-[11px] text-[#736B5E] mt-0.5">Blue Dart Luxury Express</p>
           </div>
 
           <div className="bg-white border border-[#E8DFD5] p-5 shadow-xs">
             <p className="text-[10px] uppercase font-bold tracking-widest text-[#8C6D37]">Gross Transaction Value</p>
-            <p className="font-serif text-3xl font-bold text-[#9C7C38] mt-1">₹{totalRevenue.toLocaleString('en-IN')}</p>
+            <p className="font-sans text-3xl font-bold text-[#9C7C38] mt-1">₹{totalRevenue.toLocaleString('en-IN')}</p>
             <p className="text-[11px] text-[#736B5E] mt-0.5">Razorpay & SSL Idempotent</p>
           </div>
         </div>

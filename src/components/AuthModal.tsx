@@ -5,7 +5,7 @@ import { AuthScreen } from './AuthScreen';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: (user: User) => void;
+  onLoginSuccess: (user: User, initialData?: { cart?: any[]; wishlist?: string[]; orders?: any[] }) => void;
   initialMode?: 'login' | 'signup';
 }
 
@@ -17,8 +17,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLoginSu
       isModal={true}
       onClose={onClose}
       initialMode={initialMode}
-      onLoginSuccess={(user) => {
-        onLoginSuccess(user);
+      onLoginSuccess={(user, initialData) => {
+        onLoginSuccess(user, initialData);
         onClose();
       }}
     />

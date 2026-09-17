@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 interface AuthScreenProps {
-  onLoginSuccess: (user: User) => void;
+  onLoginSuccess: (user: User, initialData?: { cart?: any[]; wishlist?: string[]; orders?: any[] }) => void;
   onContinueAsGuest?: () => void;
   isModal?: boolean;
   onClose?: () => void;
@@ -245,7 +245,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
       setSuccessToast(data.message || redirectNotice);
       setTimeout(() => {
-        onLoginSuccess(authenticatedUser);
+        onLoginSuccess(authenticatedUser, {
+          cart: data.cart || [],
+          wishlist: data.wishlist || [],
+          orders: data.orders || []
+        });
         if (onClose) onClose();
       }, 400);
     } catch (err: any) {
@@ -305,7 +309,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
       setSuccessToast(data.message || 'Account created successfully!');
       setTimeout(() => {
-        onLoginSuccess(data.user);
+        onLoginSuccess(data.user, {
+          cart: data.cart || [],
+          wishlist: data.wishlist || [],
+          orders: data.orders || []
+        });
         if (onClose) onClose();
       }, 400);
     } catch (err: any) {
@@ -395,7 +403,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
       setSuccessToast(data.message || 'Email verified! Account created.');
       setTimeout(() => {
-        onLoginSuccess(data.user);
+        onLoginSuccess(data.user, {
+          cart: data.cart || [],
+          wishlist: data.wishlist || [],
+          orders: data.orders || []
+        });
         if (onClose) onClose();
       }, 400);
     } catch (err: any) {
@@ -1127,7 +1139,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                             onKeyDown={(e) =>
                               handleDigitKeyDown(idx, e, signupOtpDigits, signupOtpRefs)
                             }
-                            className="w-10 h-12 sm:w-12 sm:h-12 text-center font-serif text-lg font-bold text-[#0F4C5C] bg-[#FAF9F5] border border-[#D4C7B5] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-all shadow-xs"
+                            className="w-10 h-12 sm:w-12 sm:h-12 text-center font-mono text-lg font-bold text-[#0F4C5C] bg-[#FAF9F5] border border-[#D4C7B5] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-all shadow-xs"
                           />
                         ))}
                       </div>
@@ -1307,7 +1319,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                         onKeyDown={(e) =>
                           handleDigitKeyDown(idx, e, recoveryOtpDigits, recoveryOtpRefs)
                         }
-                        className="w-10 h-12 sm:w-12 sm:h-12 text-center font-serif text-lg font-bold text-[#0F4C5C] bg-[#FAF9F5] border border-[#D4C7B5] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-all shadow-xs"
+                        className="w-10 h-12 sm:w-12 sm:h-12 text-center font-mono text-lg font-bold text-[#0F4C5C] bg-[#FAF9F5] border border-[#D4C7B5] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-all shadow-xs"
                       />
                     ))}
                   </div>

@@ -194,7 +194,7 @@ export const ShopTheLook: React.FC<ShopTheLookProps> = ({
                 <span className="text-xs text-[#736B5E] hidden sm:inline">•</span>
                 <span className="text-xs text-[#736B5E] hidden sm:inline">{currentLook.subtitle}</span>
               </div>
-              <span className="text-xs font-serif font-semibold text-[#0F4C5C]">{currentLook.price}</span>
+              <span className="text-xs font-sans font-semibold text-[#0F4C5C]">{currentLook.price}</span>
             </div>
           </div>
 

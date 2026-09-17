@@ -125,7 +125,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                     <span className="text-[10px] uppercase font-bold tracking-widest text-[#8C6D37] block">Featured Creation</span>
                     <p className="font-serif text-xs font-semibold text-[#24211E]">Kavya Emerald Banarasi Tissue Saree</p>
                   </div>
-                  <span className="text-xs font-serif font-bold text-[#0F4C5C]">₹28,900</span>
+                  <span className="text-xs font-sans font-bold text-[#0F4C5C]">₹28,900</span>
                 </div>
               </div>
             </div>

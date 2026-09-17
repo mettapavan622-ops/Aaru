@@ -285,7 +285,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <span>Estimated GST (5%)</span>
                 <span>₹{tax.toLocaleString('en-IN')}</span>
               </div>
-              <div className="flex justify-between font-serif text-base font-bold text-[#24211E] pt-2 border-t border-[#E8DFD5]">
+              <div className="flex justify-between font-sans text-base font-bold text-[#24211E] pt-2 border-t border-[#E8DFD5]">
                 <span>Total Amount</span>
                 <span>₹{total.toLocaleString('en-IN')}</span>
               </div>

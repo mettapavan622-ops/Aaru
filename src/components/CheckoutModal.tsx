@@ -589,7 +589,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <span>Estimated GST (5%)</span>
                   <span>₹{safeTax.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between font-serif text-sm font-bold text-[#0F4C5C] pt-2 border-t border-[#E8DFD5]">
+                <div className="flex justify-between font-sans text-sm font-bold text-[#0F4C5C] pt-2 border-t border-[#E8DFD5]">
                   <span>Total Payable</span>
                   <span>₹{safeTotal.toLocaleString('en-IN')}</span>
                 </div>
@@ -835,7 +835,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
                 </div>
 
-                <div className="border-t border-[#E8DFD5] pt-2 flex justify-between font-serif text-sm font-bold text-[#24211E]">
+                <div className="border-t border-[#E8DFD5] pt-2 flex justify-between font-sans text-sm font-bold text-[#24211E]">
                   <span>Total Paid</span>
                   <span>₹{createdOrder.total.toLocaleString('en-IN')}</span>
                 </div>

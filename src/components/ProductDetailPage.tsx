@@ -234,7 +234,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             <div className="py-3 border-y border-[#E8DFD5] flex items-baseline gap-3">
               {product.isOnSale && product.salePrice ? (
                 <>
-                  <span className="text-2xl sm:text-3xl font-serif font-bold text-[#0F4C5C]">
+                  <span className="text-2xl sm:text-3xl font-sans font-bold text-[#0F4C5C]">
                     ₹{product.salePrice.toLocaleString('en-IN')}
                   </span>
                   <span className="text-sm text-[#8A8175] line-through">
@@ -246,7 +246,7 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                 </>
               ) : (
                 <>
-                  <span className="text-2xl sm:text-3xl font-serif font-bold text-[#24211E]">
+                  <span className="text-2xl sm:text-3xl font-sans font-bold text-[#24211E]">
                     ₹{product.price.toLocaleString('en-IN')}
                   </span>
                   <span className="text-xs text-[#8A8175] ml-auto">

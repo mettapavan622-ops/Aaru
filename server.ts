@@ -137,6 +137,8 @@ interface DbUser {
   passwordHash?: string;
   role: 'customer' | 'admin';
   createdAt: string;
+  cart: any[];
+  wishlist: string[];
 }
 
 // -----------------------------------------------------------------------------
@@ -179,7 +181,9 @@ const usersDatabase: Map<string, DbUser> = new Map([
       name: 'Atelier Director Moni',
       passwordHash: moniAdminHash,
       role: 'admin',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      cart: [],
+      wishlist: []
     }
   ],
   [
@@ -191,7 +195,9 @@ const usersDatabase: Map<string, DbUser> = new Map([
       name: 'Aditi Sharma',
       passwordHash: defaultPatronHash,
       role: 'customer',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      cart: [],
+      wishlist: ['prod-001', 'prod-003']
     }
   ],
   [
@@ -203,10 +209,78 @@ const usersDatabase: Map<string, DbUser> = new Map([
       name: 'Atelier Director Moni',
       passwordHash: defaultAdminHash,
       role: 'admin',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      cart: [],
+      wishlist: []
     }
   ]
 ]);
+
+// Helper to extract session token from Authorization header or cookie
+function extractSessionToken(req: Request): string | null {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7).trim();
+  }
+  const customHeader = req.headers['x-auth-token'];
+  if (typeof customHeader === 'string' && customHeader.trim()) {
+    return customHeader.trim();
+  }
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    const match = cookieHeader.match(/aaru_session=([^;]+)/);
+    if (match) return decodeURIComponent(match[1].trim());
+  }
+  return null;
+}
+
+// Authenticate and return DB user record from request
+function getAuthenticatedUserFromRequest(req: Request): DbUser | null {
+  const token = extractSessionToken(req);
+  if (!token) return null;
+
+  try {
+    if (token.startsWith('aaru_jwt_')) {
+      const payloadBase64 = token.replace('aaru_jwt_', '');
+      const payloadStr = Buffer.from(payloadBase64, 'base64').toString('utf-8');
+      const payload = JSON.parse(payloadStr);
+      if (payload && payload.email) {
+        const user = usersDatabase.get(payload.email.toLowerCase().trim());
+        if (user) return user;
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+// Get order history scoped to the user
+function getUserOrders(user: DbUser): Order[] {
+  if (user.role === 'admin') {
+    return orders;
+  }
+  const normalizedEmail = user.email.toLowerCase().trim();
+  return orders.filter(
+    o => o.userId === user.id || o.customerEmail?.toLowerCase().trim() === normalizedEmail
+  );
+}
+
+// Catalog synchronization state & SSE broadcasting
+let catalogVersion = Date.now();
+const sseCatalogClients: Set<Response> = new Set();
+
+function broadcastCatalogUpdate() {
+  catalogVersion = Date.now();
+  const payload = `data: ${JSON.stringify({ type: 'CATALOG_UPDATED', version: catalogVersion, count: products.length, products })}\n\n`;
+  for (const client of sseCatalogClients) {
+    try {
+      client.write(payload);
+    } catch {
+      sseCatalogClients.delete(client);
+    }
+  }
+}
 
 // Temporary Stores for Email OTP Verification
 interface PendingSignup {
@@ -439,6 +513,39 @@ async function startServer() {
     res.json(result);
   });
 
+  // Real-Time Product Catalog Stream (Server-Sent Events)
+  app.get('/api/products/stream', (req: Request, res: Response) => {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
+
+    // Send initial catalog state
+    res.write(`data: ${JSON.stringify({ type: 'INIT', version: catalogVersion, count: products.length, products })}\n\n`);
+
+    sseCatalogClients.add(res);
+
+    const keepAlive = setInterval(() => {
+      try {
+        res.write(': keep-alive\n\n');
+      } catch {
+        clearInterval(keepAlive);
+        sseCatalogClients.delete(res);
+      }
+    }, 20000);
+
+    req.on('close', () => {
+      clearInterval(keepAlive);
+      sseCatalogClients.delete(res);
+    });
+  });
+
+  // Light version check endpoint for polling & visibility re-sync
+  app.get('/api/products/version', (req: Request, res: Response) => {
+    res.json({ version: catalogVersion, count: products.length });
+  });
+
   // Create Product (Admin)
   app.post('/api/products', (req: Request, res: Response) => {
     try {
@@ -484,6 +591,7 @@ async function startServer() {
       };
 
       products.unshift(newProduct);
+      broadcastCatalogUpdate();
       res.status(201).json(newProduct);
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to create product' });
@@ -591,6 +699,10 @@ async function startServer() {
         });
       }
 
+      if (updatedCount > 0) {
+        broadcastCatalogUpdate();
+      }
+
       res.json({
         success: true,
         message: 'Image removed from storage and database record.',
@@ -620,6 +732,7 @@ async function startServer() {
       id // preserve ID
     };
 
+    broadcastCatalogUpdate();
     res.json(products[index]);
   });
 
@@ -631,6 +744,7 @@ async function startServer() {
     if (products.length === initialLen) {
       return res.status(404).json({ error: 'Product not found' });
     }
+    broadcastCatalogUpdate();
     res.json({ success: true, message: 'Product removed from catalog' });
   });
 
@@ -1040,18 +1154,29 @@ async function startServer() {
       // If checkout order payload was sent alongside verification, register confirmed order in database
       let recordedOrder: Order | null = null;
       if (items && Array.isArray(items) && items.length > 0) {
+        const authUser = getAuthenticatedUserFromRequest(req);
+        const emailToCheck = customerEmail || shippingAddress?.email;
+        const matchedDbUser = authUser || (emailToCheck ? usersDatabase.get(emailToCheck.toLowerCase().trim()) : null);
+        const resolvedUserId = matchedDbUser ? matchedDbUser.id : (authUser ? authUser.id : `usr-guest-${Date.now()}`);
+        const resolvedEmail = (emailToCheck || (matchedDbUser ? matchedDbUser.email : 'client@aaru.luxury')).toLowerCase().trim();
+        const resolvedName = customerName || shippingAddress?.name || (matchedDbUser ? matchedDbUser.name : 'Valued Client');
+
+        if (matchedDbUser) {
+          matchedDbUser.cart = [];
+        }
+
         const orderNumber = `AARU-2026-${Math.floor(10000 + Math.random() * 90000)}`;
         recordedOrder = {
           id: `ord-${Date.now()}`,
           orderNumber,
-          userId: 'user-current',
-          customerName: customerName || shippingAddress?.name || 'Valued Client',
-          customerEmail: customerEmail || 'client@aaru.luxury',
+          userId: resolvedUserId,
+          customerName: resolvedName,
+          customerEmail: resolvedEmail,
           customerPhone: customerPhone || shippingAddress?.phone || '+91 98765 43210',
           items,
           shippingAddress: shippingAddress || {
             id: 'addr-default',
-            name: 'Valued Client',
+            name: resolvedName,
             street: 'Lavelle Road',
             city: 'Bengaluru',
             state: 'Karnataka',
@@ -1110,13 +1235,24 @@ async function startServer() {
         return res.status(409).json({ error: 'Order already processed for this transaction ID. Duplicate prevented.' });
       }
 
+      const authUser = getAuthenticatedUserFromRequest(req);
+      const emailToCheck = customerEmail || shippingAddress?.email;
+      const matchedDbUser = authUser || (emailToCheck ? usersDatabase.get(emailToCheck.toLowerCase().trim()) : null);
+      const resolvedUserId = matchedDbUser ? matchedDbUser.id : (authUser ? authUser.id : `usr-guest-${Date.now()}`);
+      const resolvedEmail = (emailToCheck || (matchedDbUser ? matchedDbUser.email : 'client@aaru.luxury')).toLowerCase().trim();
+      const resolvedName = customerName || shippingAddress?.name || (matchedDbUser ? matchedDbUser.name : 'Valued Client');
+
+      if (matchedDbUser) {
+        matchedDbUser.cart = [];
+      }
+
       const orderNumber = `AARU-2026-${Math.floor(10000 + Math.random() * 90000)}`;
       const newOrder: Order = {
         id: `ord-${Date.now()}`,
         orderNumber,
-        userId: 'user-current',
-        customerName: customerName || shippingAddress.name || 'Valued Client',
-        customerEmail: customerEmail || 'client@aaru.luxury',
+        userId: resolvedUserId,
+        customerName: resolvedName,
+        customerEmail: resolvedEmail,
         customerPhone: customerPhone || shippingAddress.phone || '+91 98765 43210',
         items,
         shippingAddress,
@@ -1570,13 +1706,17 @@ async function startServer() {
           picture: picture || '',
           phone: '',
           role: normalizedEmail.includes('admin') ? 'admin' : 'customer',
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          cart: [],
+          wishlist: []
         };
         usersDatabase.set(normalizedEmail, user);
       } else {
         // Sign-In flow: existing user found
         if (name && !user.name) user.name = name;
         if (picture && !user.picture) user.picture = picture;
+        if (!user.cart) user.cart = [];
+        if (!user.wishlist) user.wishlist = [];
       }
 
       // Establish secure, persistent session token (JWT simulation)
@@ -1594,6 +1734,8 @@ async function startServer() {
         maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
       });
 
+      const userOrders = getUserOrders(user);
+
       res.json({
         success: true,
         isNewUser,
@@ -1608,7 +1750,10 @@ async function startServer() {
           phone: user.phone || '',
           role: user.role,
           picture: user.picture
-        }
+        },
+        cart: user.cart || [],
+        wishlist: user.wishlist || [],
+        orders: userOrders
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Google OAuth verification failed.' });
@@ -1747,7 +1892,9 @@ async function startServer() {
         phone: cleanPhone || '',
         passwordHash,
         role: 'customer',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        cart: [], // explicitly empty array
+        wishlist: [] // explicitly empty array
       };
 
       usersDatabase.set(cleanEmail, newUser);
@@ -1769,6 +1916,7 @@ async function startServer() {
 
       res.status(201).json({
         success: true,
+        isNewUser: true,
         message: `Welcome to AARU Atelier, ${newUser.name}! Your account has been created.`,
         token: sessionToken,
         user: {
@@ -1777,7 +1925,10 @@ async function startServer() {
           name: newUser.name,
           phone: newUser.phone,
           role: newUser.role
-        }
+        },
+        cart: [],
+        wishlist: [],
+        orders: []
       });
     } catch {
       res.status(400).json({ error: 'Invalid input credentials' });
@@ -1906,7 +2057,9 @@ async function startServer() {
         phone: pending.phone,
         passwordHash: hashPassword(crypto.randomBytes(16).toString('hex')),
         role: 'customer',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        cart: [], // explicitly empty array
+        wishlist: [] // explicitly empty array
       };
 
       usersDatabase.set(cleanEmail, newUser);
@@ -1928,6 +2081,7 @@ async function startServer() {
 
       res.status(201).json({
         success: true,
+        isNewUser: true,
         message: `Welcome to AARU Atelier, ${newUser.name}! Your account has been verified and created.`,
         token: sessionToken,
         user: {
@@ -1936,7 +2090,10 @@ async function startServer() {
           name: newUser.name,
           phone: newUser.phone,
           role: newUser.role
-        }
+        },
+        cart: [],
+        wishlist: [],
+        orders: []
       });
     } catch {
       res.status(400).json({ error: 'Invalid input credentials' });
@@ -1979,6 +2136,9 @@ async function startServer() {
         return res.status(401).json({ error: 'Invalid input credentials' });
       }
 
+      if (!user.cart) user.cart = [];
+      if (!user.wishlist) user.wishlist = [];
+
       const sessionToken = `aaru_jwt_${Buffer.from(JSON.stringify({ 
         id: user.id, 
         email: user.email, 
@@ -1993,6 +2153,8 @@ async function startServer() {
         maxAge: 30 * 24 * 60 * 60 * 1000 
       });
 
+      const userOrders = getUserOrders(user);
+
       res.json({
         success: true,
         message: `Welcome back to AARU Atelier, ${user.name}!`,
@@ -2004,7 +2166,10 @@ async function startServer() {
           phone: user.phone || '',
           role: user.role,
           picture: user.picture
-        }
+        },
+        cart: user.cart || [],
+        wishlist: user.wishlist || [],
+        orders: userOrders
       });
     } catch {
       res.status(400).json({ error: 'Invalid input credentials' });
@@ -2264,9 +2429,91 @@ async function startServer() {
     }
   });
 
-  // Current Session & Logout
+  // Current Session & User Data Hydration
   app.get('/api/auth/me', (req: Request, res: Response) => {
-    res.json({ user: null });
+    const user = getAuthenticatedUserFromRequest(req);
+    if (!user) {
+      return res.json({ 
+        authenticated: false, 
+        user: null, 
+        cart: [], 
+        wishlist: [], 
+        orders: [] 
+      });
+    }
+
+    if (!user.cart) user.cart = [];
+    if (!user.wishlist) user.wishlist = [];
+
+    const userOrders = getUserOrders(user);
+
+    res.json({
+      authenticated: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone || '',
+        role: user.role,
+        picture: user.picture
+      },
+      cart: user.cart,
+      wishlist: user.wishlist,
+      orders: userOrders
+    });
+  });
+
+  // Explicit User Data Hydration Gateway
+  app.get('/api/user/data', (req: Request, res: Response) => {
+    const user = getAuthenticatedUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Unauthorized: Valid session token required for data hydration.' 
+      });
+    }
+
+    if (!user.cart) user.cart = [];
+    if (!user.wishlist) user.wishlist = [];
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone || '',
+        role: user.role,
+        picture: user.picture
+      },
+      cart: user.cart,
+      wishlist: user.wishlist,
+      orders: getUserOrders(user)
+    });
+  });
+
+  // Sync Cart to User Database Record
+  app.post('/api/user/cart', (req: Request, res: Response) => {
+    const user = getAuthenticatedUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Sign in required to persist shopping bag.' });
+    }
+
+    const { cart } = req.body;
+    user.cart = Array.isArray(cart) ? cart : [];
+    res.json({ success: true, cart: user.cart });
+  });
+
+  // Sync Wishlist to User Database Record
+  app.post('/api/user/wishlist', (req: Request, res: Response) => {
+    const user = getAuthenticatedUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Sign in required to persist wishlist.' });
+    }
+
+    const { wishlist } = req.body;
+    user.wishlist = Array.isArray(wishlist) ? wishlist : [];
+    res.json({ success: true, wishlist: user.wishlist });
   });
 
   app.post('/api/auth/logout', (req: Request, res: Response) => {
