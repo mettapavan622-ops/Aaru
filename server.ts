@@ -655,8 +655,8 @@ async function startServer() {
     }
   };
 
-  app.post('/api/products/images/upload', upload.array('images', 20), handleUploadImages);
-  app.post('/api/upload-images', upload.array('images', 20), handleUploadImages);
+  app.post('/api/products/images/upload', upload.array('images', 20) as any, handleUploadImages);
+  app.post('/api/upload-images', upload.array('images', 20) as any, handleUploadImages);
 
   // 2. Delete an uploaded image from storage and remove from database record
   const handleDeleteImage = (req: Request, res: Response) => {
@@ -991,9 +991,16 @@ async function startServer() {
     res.json(item);
   });
 
-  // Orders: List
+  // Orders: List (scoped to authenticated patron; admins receive all store orders; guests get empty list)
   app.get('/api/orders', (req: Request, res: Response) => {
-    res.json(orders);
+    const user = getAuthenticatedUserFromRequest(req);
+    if (!user) {
+      return res.json([]);
+    }
+    if (user.role === 'admin') {
+      return res.json(orders);
+    }
+    return res.json(getUserOrders(user));
   });
 
   // Razorpay: Public Key Provider (Client-Safe Key ID only, never secret)
@@ -2529,12 +2536,7 @@ async function startServer() {
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
-        allowedHosts: [
-          'aaru-a-woman-s-sixth-element.ai.studio',
-          '.ai.studio',
-          'localhost',
-          '127.0.0.1'
-        ]
+        allowedHosts: true
       },
       appType: 'spa'
     });

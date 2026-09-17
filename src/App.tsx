@@ -139,26 +139,18 @@ export default function App() {
 
   // Core Commerce State
   const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [orders, setOrders] = useState<Order[]>(sampleOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [announcement, setAnnouncement] = useState<AnnouncementSettings>(defaultAnnouncement);
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
   const [collections, setCollections] = useState<Collection[]>(defaultCollections);
 
-  // Bag, Checkout, Wishlist, Tracking Drawers/Modals
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      product: initialProducts[0],
-      variant: initialProducts[0].variants[0],
-      quantity: 1
-    }
-  ]);
+  // Bag, Checkout, Wishlist, Tracking Drawers/Modals - start clean and empty
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
-  const [wishlistProductIds, setWishlistProductIds] = useState<string[]>(() => {
-    return initialProducts[1]?.id ? [initialProducts[1].id] : [];
-  });
+  const [wishlistProductIds, setWishlistProductIds] = useState<string[]>([]);
 
   // Active Product for PDP
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(initialProducts[0]);
@@ -178,6 +170,52 @@ export default function App() {
     } catch (err) {
       console.error('Failed to load coupons:', err);
     }
+  };
+
+  const handleAuthSuccess = (
+    user: User,
+    initialData?: { cart?: any[]; wishlist?: string[]; orders?: any[] }
+  ) => {
+    setCurrentUser(user);
+
+    // Explicitly initialize state from backend user session data (empty for new users)
+    setCartItems(Array.isArray(initialData?.cart) ? initialData.cart : []);
+    setWishlistProductIds(Array.isArray(initialData?.wishlist) ? initialData.wishlist : []);
+    setOrders(Array.isArray(initialData?.orders) ? initialData.orders : []);
+    setAppliedPromo('');
+    setPromoDiscount(0);
+
+    // Strict Role-Based Redirection:
+    if (user.role === 'admin' || user.email?.toLowerCase() === 'aarubymoni@admin.co.in') {
+      setCurrentDashboard('admin');
+      const token = localStorage.getItem('aaru_auth_token');
+      fetch('/api/orders', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) setOrders(data);
+        })
+        .catch(() => {});
+    } else {
+      setCurrentDashboard('user');
+      setActiveUserView('home');
+    }
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem('aaru_user_session');
+    localStorage.removeItem('aaru_auth_token');
+    setCurrentUser(null);
+    setCartItems([]);
+    setWishlistProductIds([]);
+    setOrders([]);
+    setAppliedPromo('');
+    setPromoDiscount(0);
+    setCurrentDashboard('user');
+    setActiveUserView('home');
+    setIsGuestBrowsing(false);
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   };
 
   // Synchronize with backend API on mount
@@ -200,17 +238,64 @@ export default function App() {
       })
       .catch(err => console.error('Failed to load announcement from API:', err));
 
-    fetch('/api/orders')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setOrders(data);
-        }
-      })
-      .catch(err => console.error('Failed to load orders from API:', err));
-
     fetchCoupons();
+
+    // Hydrate user cart, wishlist, and orders from database session if authenticated
+    const token = localStorage.getItem('aaru_auth_token');
+    if (currentUser && token) {
+      fetch('/api/user/data', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.success) {
+            if (Array.isArray(data.cart)) setCartItems(data.cart);
+            if (Array.isArray(data.wishlist)) setWishlistProductIds(data.wishlist);
+            if (Array.isArray(data.orders)) setOrders(data.orders);
+          }
+        })
+        .catch(err => console.error('Failed to hydrate user data:', err));
+    } else if (currentUser && (currentUser.role === 'admin' || currentUser.email?.toLowerCase() === 'aarubymoni@admin.co.in')) {
+      fetch('/api/orders', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) setOrders(data);
+        })
+        .catch(() => {});
+    }
   }, []);
+
+  // Persist shopping cart changes to backend for authenticated patron
+  useEffect(() => {
+    const token = localStorage.getItem('aaru_auth_token');
+    if (currentUser && token) {
+      fetch('/api/user/cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ cart: cartItems })
+      }).catch(() => {});
+    }
+  }, [cartItems, currentUser]);
+
+  // Persist wishlist changes to backend for authenticated patron
+  useEffect(() => {
+    const token = localStorage.getItem('aaru_auth_token');
+    if (currentUser && token) {
+      fetch('/api/user/wishlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ wishlist: wishlistProductIds })
+      }).catch(() => {});
+    }
+  }, [wishlistProductIds, currentUser]);
 
   // Cart Operations
   const handleAddToCart = (product: Product, variant: ProductVariant, quantity: number) => {
@@ -519,14 +604,7 @@ export default function App() {
         onUpdateAnnouncement={handleAdminUpdateAnnouncement}
         onUpdateOrderStatus={handleAdminUpdateOrderStatus}
         onSwitchToUser={() => setCurrentDashboard('user')}
-        onSignOut={() => {
-          localStorage.removeItem('aaru_user_session');
-          localStorage.removeItem('aaru_auth_token');
-          setCurrentUser(null);
-          setCurrentDashboard('user');
-          setActiveUserView('home');
-          setIsGuestBrowsing(false);
-        }}
+        onSignOut={handleSignOut}
         onRefreshOrders={handleRefreshOrders}
       />
     );
@@ -539,18 +617,7 @@ export default function App() {
   if (!currentUser && !isGuestBrowsing) {
     return (
       <AuthScreen
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-          // Strict Role-Based Redirection:
-          // Admin credentials (aarubymoni@admin.co.in) -> Admin Dashboard
-          // Any other credentials -> Customer Storefront
-          if (user.role === 'admin' || user.email?.toLowerCase() === 'aarubymoni@admin.co.in') {
-            setCurrentDashboard('admin');
-          } else {
-            setCurrentDashboard('user');
-            setActiveUserView('home');
-          }
-        }}
+        onLoginSuccess={handleAuthSuccess}
         onContinueAsGuest={() => {
           setIsGuestBrowsing(true);
         }}
@@ -583,14 +650,7 @@ export default function App() {
           setAuthModalMode(mode === 'signup' ? 'signup' : 'login');
           setIsAuthModalOpen(true);
         }}
-        onSignOut={() => {
-          localStorage.removeItem('aaru_user_session');
-          localStorage.removeItem('aaru_auth_token');
-          setCurrentUser(null);
-          setCurrentDashboard('user');
-          setActiveUserView('home');
-          setIsGuestBrowsing(false);
-        }}
+        onSignOut={handleSignOut}
         onSelectCategory={(categoryName) => {
           if (categoryName === 'Customized Clothing') {
             setActiveUserView('custom');
@@ -978,18 +1038,7 @@ export default function App() {
         isOpen={isAuthModalOpen}
         initialMode={authModalMode}
         onClose={() => setIsAuthModalOpen(false)}
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-          // Strict Role-Based Redirection:
-          // Admin credentials (aarubymoni@admin.co.in) -> Admin Dashboard
-          // Any other credentials -> Customer Storefront
-          if (user.role === 'admin' || user.email?.toLowerCase() === 'aarubymoni@admin.co.in') {
-            setCurrentDashboard('admin');
-          } else {
-            setCurrentDashboard('user');
-            setActiveUserView('home');
-          }
-        }}
+        onLoginSuccess={handleAuthSuccess}
       />
     </div>
   );

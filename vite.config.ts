@@ -12,13 +12,7 @@ export default defineConfig(() => {
       },
     },
     server: {
-      // Allow hostnames including the AI Studio domain or any subdomain
-      allowedHosts: [
-        'aaru-a-woman-s-sixth-element.ai.studio',
-        '.ai.studio',
-        'localhost',
-        '127.0.0.1'
-      ],
+      allowedHosts: true as const,
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
