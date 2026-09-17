@@ -133,7 +133,7 @@ export const Header: React.FC<HeaderProps> = ({
     { label: 'Customised Clothing', id: 'custom-clothing' }
   ];
 
-  const whatsappUrl = "https://wa.me/919876543210?text=Hello%20AARU%20Atelier,%20I%20am%20exploring%20your%20collection%20online%20and%20need%20styling%20assistance.";
+  const whatsappUrl = "https://wa.me/919346066170?text=Hello%20AARU%20Atelier,%20I%20am%20exploring%20your%20collection%20online%20and%20need%20styling%20assistance.";
 
   return (
     <header className="sticky top-0 z-30 w-full bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#E8DFD5] transition-all">
@@ -297,6 +297,19 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </button>
 
+          {/* WhatsApp Direct Care (Desktop) */}
+          <a
+            id="header-whatsapp-btn"
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="WhatsApp Care: +91 93460 66170"
+            className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-[#075E54] bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 transition-colors"
+          >
+            <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" />
+            <span>+91 93460 66170</span>
+          </a>
+
           {/* Account Dropdown */}
           <div className="relative" ref={accountMenuRef}>
             <button
@@ -337,7 +350,7 @@ export const Header: React.FC<HeaderProps> = ({
                           <Phone className="w-3.5 h-3.5 text-[#8C6D37] shrink-0" />
                           <span className="text-[#8C6D37] font-medium">Mobile:</span>
                           <span className="font-mono text-[#24211E] font-medium truncate">
-                            {currentUser.phone || '+91 98765 43210'}
+                            {currentUser.phone || '+91 93460 66170'}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-[#5C5549]">
@@ -942,7 +955,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="w-full min-h-[44px] px-4 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4" />
-                <span>WhatsApp Customer Care</span>
+                <span>WhatsApp Care: +91 93460 66170</span>
               </a>
 
               {currentUser?.role === 'admin' && (

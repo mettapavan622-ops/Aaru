@@ -140,7 +140,7 @@ Color: ${formData.colorPreference}
 Measurements: Bust: ${formData.bust || 'TBD'}, Waist: ${formData.waist || 'TBD'}, Hip: ${formData.hip || 'TBD'}, Height: ${formData.height || 'TBD'}
 Special Notes: ${formData.specialNotes || 'None'}`;
 
-  const whatsappUrl = `https://wa.me/919876543210?text=${encodeURIComponent(whatsappMessage)}`;
+  const whatsappUrl = `https://wa.me/919346066170?text=${encodeURIComponent(whatsappMessage)}`;
 
   return (
     <section id="customized-clothing" className="py-20 lg:py-28 bg-[#FAF7F2] border-t border-[#E8DFD5]">
@@ -199,7 +199,7 @@ Special Notes: ${formData.specialNotes || 'None'}`;
                   className="px-6 py-3 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-2 shadow-md transition-colors"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  Continue Chat on WhatsApp
+                  Continue Chat on WhatsApp (+91 93460 66170)
                 </a>
                 <button
                   type="button"
@@ -494,7 +494,7 @@ Special Notes: ${formData.specialNotes || 'None'}`;
                     <input
                       type="tel"
                       required
-                      placeholder="e.g. +91 98765 43210"
+                      placeholder="e.g. +91 93460 66170"
                       value={formData.customerPhone}
                       onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
                       className="w-full p-2.5 bg-[#FAF7F2] border border-[#D4C7B5] text-xs focus:outline-none focus:border-[#0F4C5C]"

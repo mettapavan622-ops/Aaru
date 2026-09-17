@@ -177,7 +177,7 @@ const usersDatabase: Map<string, DbUser> = new Map([
     {
       id: 'usr-admin-moni',
       email: 'aarubymoni@admin.co.in',
-      phone: '+91 98765 43210',
+      phone: '+91 93460 66170',
       name: 'Atelier Director Moni',
       passwordHash: moniAdminHash,
       role: 'admin',
@@ -191,7 +191,7 @@ const usersDatabase: Map<string, DbUser> = new Map([
     {
       id: 'usr-customer-1',
       email: 'aditi.sharma@example.com',
-      phone: '+91 98765 43210',
+      phone: '+91 93460 66170',
       name: 'Aditi Sharma',
       passwordHash: defaultPatronHash,
       role: 'customer',
@@ -205,7 +205,7 @@ const usersDatabase: Map<string, DbUser> = new Map([
     {
       id: 'usr-admin-1',
       email: 'admin@aaru.luxury',
-      phone: '+91 98765 43210',
+      phone: '+91 93460 66170',
       name: 'Atelier Director Moni',
       passwordHash: defaultAdminHash,
       role: 'admin',
@@ -1179,7 +1179,7 @@ async function startServer() {
           userId: resolvedUserId,
           customerName: resolvedName,
           customerEmail: resolvedEmail,
-          customerPhone: customerPhone || shippingAddress?.phone || '+91 98765 43210',
+          customerPhone: customerPhone || shippingAddress?.phone || '+91 93460 66170',
           items,
           shippingAddress: shippingAddress || {
             id: 'addr-default',
@@ -1188,7 +1188,7 @@ async function startServer() {
             city: 'Bengaluru',
             state: 'Karnataka',
             pincode: '560001',
-            phone: '+91 98765 43210',
+            phone: '+91 93460 66170',
             isDefault: true
           },
           subtotal: subtotal || 0,
@@ -1260,7 +1260,7 @@ async function startServer() {
         userId: resolvedUserId,
         customerName: resolvedName,
         customerEmail: resolvedEmail,
-        customerPhone: customerPhone || shippingAddress.phone || '+91 98765 43210',
+        customerPhone: customerPhone || shippingAddress.phone || '+91 93460 66170',
         items,
         shippingAddress,
         subtotal,
@@ -1948,163 +1948,17 @@ async function startServer() {
   app.post('/api/signup', handleManualSignUpRoute);
   app.post('/signup', handleManualSignUpRoute);
 
-  // Option B: Request OTP with Name, Contact Number, Email Address (with input sanitization)
-  app.post('/api/auth/signup/send-otp', async (req: Request, res: Response) => {
-    try {
-      const { name, displayName, username, phone, email } = req.body;
-      const rawName = displayName || name || username;
-
-      if (containsHarmfulMarkup(email) || containsHarmfulMarkup(rawName) || containsHarmfulMarkup(phone)) {
-        return res.status(400).json({ error: 'Invalid input credentials' });
-      }
-
-      const cleanEmail = sanitizeAuthInput(email).toLowerCase();
-      const cleanName = sanitizeAuthInput(rawName);
-      const cleanPhone = sanitizeAuthInput(phone);
-
-      if (!validateEmailFormat(cleanEmail) || !validateNameInput(cleanName)) {
-        return res.status(400).json({ error: 'Invalid input credentials' });
-      }
-
-      if (usersDatabase.has(cleanEmail)) {
-        return res.status(400).json({ error: 'Invalid input credentials' });
-      }
-
-      // 30-second rate limiting between requests
-      const existing = pendingSignupStore[cleanEmail];
-      if (existing && Date.now() - existing.lastSentAt < 30000) {
-        const waitSec = Math.ceil((30000 - (Date.now() - existing.lastSentAt)) / 1000);
-        return res.status(429).json({ 
-          error: `Please wait ${waitSec} seconds before requesting a new verification code.` 
-        });
-      }
-
-      // Cryptographically secure 6-digit OTP
-      const generatedOtp = crypto.randomInt(100000, 1000000).toString();
-
-      pendingSignupStore[cleanEmail] = {
-        name: cleanName,
-        phone: cleanPhone,
-        email: cleanEmail,
-        otp: generatedOtp,
-        expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
-        attempts: 0,
-        lastSentAt: Date.now()
-      };
-
-      const emailResult = await sendBrevoOtpEmail({
-        toEmail: cleanEmail,
-        toName: cleanName,
-        subject: 'Your AARU Atelier Sign Up Verification Code',
-        otpCode: generatedOtp,
-        purpose: 'signup'
-      });
-
-      if (!emailResult.success) {
-        return res.status(502).json({
-          error: emailResult.message || 'Failed to dispatch email via Brevo. Please check your Brevo sender configuration.'
-        });
-      }
-
-      res.json({
-        success: true,
-        message: emailResult.simulated 
-          ? `Sandbox mode: OTP code generated.` 
-          : `6-digit verification code dispatched to ${cleanEmail}.`,
-        email: cleanEmail,
-        demoOtp: emailResult.simulated ? generatedOtp : undefined
-      });
-    } catch {
-      res.status(400).json({ error: 'Invalid input credentials' });
-    }
+  // Sign-up is strictly via manual password. OTP signup endpoint is discontinued.
+  app.post('/api/auth/signup/send-otp', (req: Request, res: Response) => {
+    return res.status(400).json({ 
+      error: 'Sign up via email OTP has been discontinued. Please register using a manual password.' 
+    });
   });
 
-  // Option B: Verify OTP & Create Account
   app.post('/api/auth/signup/verify-otp', (req: Request, res: Response) => {
-    try {
-      const { email, otp } = req.body;
-
-      if (containsHarmfulMarkup(email) || containsHarmfulMarkup(otp)) {
-        return res.status(400).json({ error: 'Invalid input credentials' });
-      }
-
-      const cleanEmail = sanitizeAuthInput(email).toLowerCase();
-      const cleanOtp = sanitizeAuthInput(otp);
-
-      if (!validateEmailFormat(cleanEmail) || !/^\d{6}$/.test(cleanOtp)) {
-        return res.status(400).json({ error: 'Invalid input credentials' });
-      }
-
-      const pending = pendingSignupStore[cleanEmail];
-      if (!pending) {
-        return res.status(400).json({ error: 'Invalid input credentials' });
-      }
-
-      if (Date.now() > pending.expiresAt) {
-        delete pendingSignupStore[cleanEmail];
-        return res.status(400).json({ error: 'Invalid input credentials' });
-      }
-
-      pending.attempts += 1;
-      if (pending.attempts > 5) {
-        delete pendingSignupStore[cleanEmail];
-        return res.status(400).json({ error: 'Invalid input credentials' });
-      }
-
-      const isMasterTestCode = cleanOtp === '123456' || cleanOtp === '849201';
-      if (pending.otp !== cleanOtp && !isMasterTestCode) {
-        return res.status(400).json({ error: 'Invalid input credentials' });
-      }
-
-      // Valid OTP: Register customer account
-      const newUser: DbUser = {
-        id: `usr-${Date.now()}`,
-        email: pending.email,
-        name: pending.name,
-        phone: pending.phone,
-        passwordHash: hashPassword(crypto.randomBytes(16).toString('hex')),
-        role: 'customer',
-        createdAt: new Date().toISOString(),
-        cart: [], // explicitly empty array
-        wishlist: [] // explicitly empty array
-      };
-
-      usersDatabase.set(cleanEmail, newUser);
-      delete pendingSignupStore[cleanEmail];
-
-      const sessionToken = `aaru_jwt_${Buffer.from(JSON.stringify({ 
-        id: newUser.id, 
-        email: newUser.email, 
-        role: newUser.role, 
-        iat: Date.now() 
-      })).toString('base64')}`;
-
-      res.cookie('aaru_session', sessionToken, { 
-        httpOnly: true, 
-        secure: process.env.NODE_ENV === 'production', 
-        sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 * 1000 
-      });
-
-      res.status(201).json({
-        success: true,
-        isNewUser: true,
-        message: `Welcome to AARU Atelier, ${newUser.name}! Your account has been verified and created.`,
-        token: sessionToken,
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          name: newUser.name,
-          phone: newUser.phone,
-          role: newUser.role
-        },
-        cart: [],
-        wishlist: [],
-        orders: []
-      });
-    } catch {
-      res.status(400).json({ error: 'Invalid input credentials' });
-    }
+    return res.status(400).json({ 
+      error: 'Sign up via email OTP has been discontinued. Please register using a manual password.' 
+    });
   });
 
   // ===========================================================================
@@ -2348,89 +2202,56 @@ async function startServer() {
     }
   });
 
-  // Resend OTP Helper (for both Signup and Forgot Password)
+  // Resend OTP Helper (strictly for Password Reset)
   app.post('/api/auth/resend-otp', async (req: Request, res: Response) => {
     try {
-      const { email, purpose } = req.body; // 'signup' | 'forgot-password'
+      const { email, purpose } = req.body;
       if (!email) {
         return res.status(400).json({ error: 'Email is required.' });
+      }
+
+      if (purpose === 'signup') {
+        return res.status(400).json({ error: 'OTP generation is strictly reserved for password resets. Sign up using manual password.' });
       }
 
       const normalizedEmail = email.trim().toLowerCase();
       const generatedOtp = crypto.randomInt(100000, 1000000).toString();
 
-      if (purpose === 'signup') {
-        const pending = pendingSignupStore[normalizedEmail];
-        if (!pending) {
-          return res.status(400).json({ error: 'No pending sign-up request found.' });
-        }
-        if (Date.now() - pending.lastSentAt < 30000) {
-          const waitSec = Math.ceil((30000 - (Date.now() - pending.lastSentAt)) / 1000);
-          return res.status(429).json({ error: `Please wait ${waitSec}s before resending code.` });
-        }
-        pending.otp = generatedOtp;
-        pending.expiresAt = Date.now() + 10 * 60 * 1000;
-        pending.lastSentAt = Date.now();
-        pending.attempts = 0;
+      const entry = passwordResetStore[normalizedEmail];
+      if (!entry) {
+        return res.status(400).json({ error: 'No active password recovery request found.' });
+      }
+      if (Date.now() - entry.lastSentAt < 30000) {
+        const waitSec = Math.ceil((30000 - (Date.now() - entry.lastSentAt)) / 1000);
+        return res.status(429).json({ error: `Please wait ${waitSec}s before resending code.` });
+      }
+      entry.otp = generatedOtp;
+      entry.expiresAt = Date.now() + 10 * 60 * 1000;
+      entry.lastSentAt = Date.now();
+      entry.attempts = 0;
 
-        const emailResult = await sendBrevoOtpEmail({
-          toEmail: normalizedEmail,
-          toName: pending.name,
-          subject: 'Your AARU Atelier Sign Up Verification Code',
-          otpCode: generatedOtp,
-          purpose: 'signup'
-        });
+      const user = usersDatabase.get(normalizedEmail);
+      const emailResult = await sendBrevoOtpEmail({
+        toEmail: normalizedEmail,
+        toName: user?.name,
+        subject: 'Reset Your AARU Atelier Password',
+        otpCode: generatedOtp,
+        purpose: 'forgot-password'
+      });
 
-        if (!emailResult.success) {
-          return res.status(502).json({
-            error: emailResult.message || 'Failed to dispatch email via Brevo. Please check your Brevo sender configuration.'
-          });
-        }
-
-        return res.json({
-          success: true,
-          message: emailResult.simulated 
-            ? `Sandbox mode: New verification code generated.`
-            : `New verification code dispatched to ${normalizedEmail}.`,
-          demoOtp: emailResult.simulated ? generatedOtp : undefined
-        });
-      } else {
-        const entry = passwordResetStore[normalizedEmail];
-        if (!entry) {
-          return res.status(400).json({ error: 'No active password recovery request found.' });
-        }
-        if (Date.now() - entry.lastSentAt < 30000) {
-          const waitSec = Math.ceil((30000 - (Date.now() - entry.lastSentAt)) / 1000);
-          return res.status(429).json({ error: `Please wait ${waitSec}s before resending code.` });
-        }
-        entry.otp = generatedOtp;
-        entry.expiresAt = Date.now() + 10 * 60 * 1000;
-        entry.lastSentAt = Date.now();
-        entry.attempts = 0;
-
-        const user = usersDatabase.get(normalizedEmail);
-        const emailResult = await sendBrevoOtpEmail({
-          toEmail: normalizedEmail,
-          toName: user?.name,
-          subject: 'Reset Your AARU Atelier Password',
-          otpCode: generatedOtp,
-          purpose: 'forgot-password'
-        });
-
-        if (!emailResult.success) {
-          return res.status(502).json({
-            error: emailResult.message || 'Failed to dispatch email via Brevo. Please check your Brevo sender configuration.'
-          });
-        }
-
-        return res.json({
-          success: true,
-          message: emailResult.simulated 
-            ? `Sandbox mode: New recovery code generated.`
-            : `New recovery code dispatched to ${normalizedEmail} via Brevo.`,
-          demoOtp: emailResult.simulated ? generatedOtp : undefined
+      if (!emailResult.success) {
+        return res.status(502).json({
+          error: emailResult.message || 'Failed to dispatch email via Brevo. Please check your Brevo sender configuration.'
         });
       }
+
+      return res.json({
+        success: true,
+        message: emailResult.simulated 
+          ? `Sandbox mode: New recovery code generated.`
+          : `New recovery code dispatched to ${normalizedEmail} via Brevo.`,
+        demoOtp: emailResult.simulated ? generatedOtp : undefined
+      });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to resend code.' });
     }

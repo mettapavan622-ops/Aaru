@@ -365,13 +365,13 @@ export const OrderHistoryModal: React.FC<OrderHistoryModalProps> = ({
                   <div className="pt-4 border-t border-[#E8DFD5] flex items-center justify-between">
                     <span className="text-xs text-[#736B5E]">Need delivery help or alterations?</span>
                     <a
-                      href={`https://wa.me/919876543210?text=Hello%20AARU%20Atelier,%20I%20have%20a%20query%20on%20Order%20${currentOrder.orderNumber}`}
+                      href={`https://wa.me/919346066170?text=Hello%20AARU%20Atelier,%20I%20have%20a%20query%20on%20Order%20${currentOrder.orderNumber}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#2D5A46] hover:underline"
                     >
                       <MessageCircle className="w-4 h-4" />
-                      Chat with Courier Concierge
+                      Chat with Courier Concierge (+91 93460 66170)
                     </a>
                   </div>
                 </div>

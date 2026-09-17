@@ -152,7 +152,7 @@ export const ContactSection: React.FC = () => {
     setSent(true);
   };
 
-  const whatsappInquiryUrl = `https://wa.me/919876543210?text=${encodeURIComponent(
+  const whatsappInquiryUrl = `https://wa.me/919346066170?text=${encodeURIComponent(
     `Hello AARU Studio, My name is ${formState.name || 'Client'}. Inquiry: ${formState.inquiry || 'I would like to consult with a stylist.'}`
   )}`;
 
@@ -184,7 +184,7 @@ export const ContactSection: React.FC = () => {
               <div className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-[#0F4C5C] shrink-0" />
                 <div>
-                  <p className="font-semibold">+91 (80) 4122 8900 / +91 98765 43210</p>
+                  <p className="font-semibold">+91 (80) 4122 8900 / +91 93460 66170</p>
                   <p className="text-[#736B5E]">Direct customer care line</p>
                 </div>
               </div>
@@ -270,7 +270,7 @@ export const ContactSection: React.FC = () => {
                     type="tel"
                     value={formState.phone}
                     onChange={(e) => setFormState({ ...formState, phone: e.target.value })}
-                    placeholder="+91 98765 43210"
+                    placeholder="+91 93460 66170"
                     className="w-full p-2.5 bg-[#FAF7F2] border border-[#D4C7B5] text-xs focus:outline-none focus:border-[#0F4C5C]"
                   />
                 </div>
@@ -369,7 +369,7 @@ export const Footer: React.FC<{
               <li><button type="button" onClick={() => handleNav('custom-clothing')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Customised Clothing Studio</button></li>
               <li><button type="button" onClick={handleOpenOrders} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Track Order Status</button></li>
               <li><button type="button" onClick={() => handleNav('shop-the-look')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Shop the Lookbook</button></li>
-              <li><a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="hover:text-[#E8B4B8] transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5 text-emerald-400" /> WhatsApp Stylist</a></li>
+              <li><a href="https://wa.me/919346066170" target="_blank" rel="noopener noreferrer" className="hover:text-[#E8B4B8] transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5 text-emerald-400" /> WhatsApp Stylist (+91 93460 66170)</a></li>
             </ul>
           </div>
 
@@ -421,14 +421,14 @@ export const Footer: React.FC<{
               </li>
               <li>
                 <a
-                  href="https://wa.me/919876543210?text=Hello%20AARU%20Customer%20Care,%20I%20need%20assistance"
+                  href="https://wa.me/919346066170?text=Hello%20AARU%20Customer%20Care,%20I%20need%20assistance"
                   target="_blank"
                   rel="noopener noreferrer"
                   id="footer-whatsapp-support-btn"
                   className="hover:text-[#E8B4B8] transition-colors flex items-center gap-2 cursor-pointer pt-0.5"
                 >
                   <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>WhatsApp Support</span>
+                  <span>WhatsApp Support: +91 93460 66170</span>
                 </a>
               </li>
             </ul>

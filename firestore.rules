@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'aarubymoni@admin.co.in' ||
+        request.auth.token.email == 'mettapavan622@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // User Profile Validation
+    function isValidUser(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.name is string && data.name.size() <= 128 &&
+             data.role in ['customer', 'admin'] &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 32)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1024)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      
+      allow create: if (isOwner(userId) || isAdmin()) &&
+                       isValidId(userId) &&
+                       isValidUser(incoming()) &&
+                       incoming().id == userId &&
+                       (incoming().role == 'customer' || isAdmin());
+
+      allow update: if (isOwner(userId) || isAdmin()) &&
+                       isValidId(userId) &&
+                       isValidUser(incoming()) &&
+                       incoming().id == existing().id &&
+                       (incoming().role == existing().role || isAdmin()) &&
+                       incoming().diff(existing()).affectedKeys().hasAny(['name', 'phone', 'photoURL', 'updatedAt', 'role']);
+
+      allow delete: if isAdmin();
+    }
+
+    // Orders Collection
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && (resource.data.customerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.customerId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(orderId) &&
+                       incoming().customerId == request.auth.uid;
+
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}

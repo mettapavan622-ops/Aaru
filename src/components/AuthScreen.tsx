@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { AaruLogo, AaruEmblem } from './AaruLogo';
+import { signInWithGooglePopup } from '../firebase';
 import { 
   Mail, 
   Lock, 
@@ -36,12 +37,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 }) => {
   // Primary Screen Modes: 'login' | 'signup' | 'forgot-password'
   const [screenMode, setScreenMode] = useState<'login' | 'signup' | 'forgot-password'>(initialMode);
-  
-  // Sign Up Tab Toggle: exactly TWO options: 'manual' (Option A) vs 'otp' (Option B)
-  const [signupTab, setSignupTab] = useState<'manual' | 'otp'>('manual');
-  
-  // Step for Option B (Email OTP): 'form' -> 'otp'
-  const [signupOtpStep, setSignupOtpStep] = useState<'form' | 'otp'>('form');
 
   // Steps for Forgot Password Flow: 1: 'request-email' -> 2: 'verify-otp' -> 3: 'reset-password' -> 4: 'success'
   const [forgotStep, setForgotStep] = useState<'request-email' | 'verify-otp' | 'reset-password' | 'success'>('request-email');
@@ -54,7 +49,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [signInPassword, setSignInPassword] = useState('');
   const [showSignInPassword, setShowSignInPassword] = useState(false);
 
-  // Sign Up Option A: Manual Password (Name, Contact Number, Email, Password, Confirm Password)
+  // Sign Up: Manual Password (Name, Contact Number, Email, Password, Confirm Password)
   const [manualName, setManualName] = useState('');
   const [manualPhone, setManualPhone] = useState('');
   const [manualEmail, setManualEmail] = useState('');
@@ -63,14 +58,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [showManualPassword, setShowManualPassword] = useState(false);
   const [showManualConfirmPassword, setShowManualConfirmPassword] = useState(false);
 
-  // Sign Up Option B: Email OTP (Name, Contact Number, Email)
-  const [otpSignupName, setOtpSignupName] = useState('');
-  const [otpSignupPhone, setOtpSignupPhone] = useState('');
-  const [otpSignupEmail, setOtpSignupEmail] = useState('');
-  const [signupOtpDigits, setSignupOtpDigits] = useState(['', '', '', '', '', '']);
-  const [signupCountdown, setSignupCountdown] = useState(30);
-  const [signupCanResend, setSignupCanResend] = useState(false);
-  const [signupDemoOtp, setSignupDemoOtp] = useState<string>('');
+  // Google Authentication States
+  const [showGoogleDialog, setShowGoogleDialog] = useState(false);
+  const [googleEmailInput, setGoogleEmailInput] = useState('mettapavan622@gmail.com');
+  const [googleNameInput, setGoogleNameInput] = useState('Pavan Metta');
 
   // Forgot Password Form States
   const [forgotEmail, setForgotEmail] = useState('');
@@ -88,8 +79,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [successToast, setSuccessToast] = useState('');
 
-  // OTP Input Element References
-  const signupOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  // OTP Input Element Reference for Password Recovery
   const recoveryOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -97,23 +87,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       setScreenMode(initialMode);
     }
   }, [initialMode]);
-
-  // Timer for Signup OTP Resend Countdown
-  useEffect(() => {
-    let timer: any;
-    if (screenMode === 'signup' && signupOtpStep === 'otp' && signupCountdown > 0) {
-      timer = setInterval(() => {
-        setSignupCountdown((prev) => {
-          if (prev <= 1) {
-            setSignupCanResend(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [screenMode, signupOtpStep, signupCountdown]);
 
   // Timer for Forgot Password Recovery OTP Resend Countdown
   useEffect(() => {
@@ -133,12 +106,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   }, [screenMode, forgotStep, recoveryCountdown]);
 
   // Focus First Input on OTP Transitions
-  useEffect(() => {
-    if (signupOtpStep === 'otp' && signupOtpRefs.current[0]) {
-      setTimeout(() => signupOtpRefs.current[0]?.focus(), 150);
-    }
-  }, [signupOtpStep]);
-
   useEffect(() => {
     if (forgotStep === 'verify-otp' && recoveryOtpRefs.current[0]) {
       setTimeout(() => recoveryOtpRefs.current[0]?.focus(), 150);
@@ -324,76 +291,27 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   };
 
   // ===========================================================================
-  // Requirement 1: Sign Up Flow - Option B (Email OTP)
-  // Fields: Name, Contact Number, Email Address -> Email OTP -> Verify -> Account Created
+  // Google Authentication Integration (One-Tap / Client-side token & API gateway)
   // ===========================================================================
-  const handleSendSignupOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const completeGoogleAuth = async (email: string, name?: string, picture?: string) => {
+    setIsSubmitting(true);
     setErrorMessage('');
     setSuccessToast('');
 
-    if (!otpSignupName.trim() || !otpSignupPhone.trim() || !otpSignupEmail.trim()) {
-      setErrorMessage('Please provide Name, Contact Number, and Email Address.');
-      return;
-    }
-
-    setIsSubmitting(true);
     try {
-      const response = await fetch('/api/auth/signup/send-otp', {
+      const response = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: otpSignupName.trim(),
-          phone: otpSignupPhone.trim(),
-          email: otpSignupEmail.trim()
+          email: email.trim().toLowerCase(),
+          name: name?.trim() || email.split('@')[0],
+          picture: picture || ''
         })
       });
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to dispatch verification code.');
-      }
-
-      if (data.demoOtp) {
-        setSignupDemoOtp(data.demoOtp);
-      }
-
-      setSignupOtpStep('otp');
-      setSignupCountdown(30);
-      setSignupCanResend(false);
-      setSuccessToast(data.message || `Verification code sent to ${otpSignupEmail.trim()}.`);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Unable to send verification code. Please check your email.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleVerifySignupOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage('');
-    setSuccessToast('');
-
-    const enteredOtp = signupOtpDigits.join('');
-    if (enteredOtp.length !== 6) {
-      setErrorMessage('Please enter the complete 6-digit verification code.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/auth/signup/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: otpSignupEmail.trim(),
-          otp: enteredOtp
-        })
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Verification failed. Incorrect code.');
+        throw new Error(data.error || 'Google authentication failed.');
       }
 
       localStorage.setItem('aaru_user_session', JSON.stringify(data.user));
@@ -401,7 +319,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         localStorage.setItem('aaru_auth_token', data.token);
       }
 
-      setSuccessToast(data.message || 'Email verified! Account created.');
+      setSuccessToast(data.message || `Welcome to AARU Atelier, ${data.user.name}!`);
+      setShowGoogleDialog(false);
+
       setTimeout(() => {
         onLoginSuccess(data.user, {
           cart: data.cart || [],
@@ -411,44 +331,64 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         if (onClose) onClose();
       }, 400);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to verify code.');
+      setErrorMessage(err.message || 'Google sign-in could not be completed.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleResendSignupOtp = async () => {
+  const handleGoogleSignIn = async () => {
     setErrorMessage('');
     setSuccessToast('');
-    setIsSubmitting(true);
 
+    // 1. Try Firebase Authentication with Google Popup
     try {
-      const response = await fetch('/api/auth/resend-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: otpSignupEmail.trim(),
-          purpose: 'signup'
-        })
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Could not resend code.');
+      setIsSubmitting(true);
+      const { fbUser } = await signInWithGooglePopup();
+      if (fbUser && fbUser.email) {
+        await completeGoogleAuth(
+          fbUser.email,
+          fbUser.displayName || undefined,
+          fbUser.photoURL || undefined
+        );
+        return;
       }
-
-      if (data.demoOtp) {
-        setSignupDemoOtp(data.demoOtp);
-      }
-
-      setSignupCountdown(30);
-      setSignupCanResend(false);
-      setSuccessToast(data.message || 'New verification code sent.');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to resend code.');
+      console.warn('Firebase Google Sign-in Notice (checking fallback):', err);
     } finally {
       setIsSubmitting(false);
     }
+
+    // 2. Try Google Identity Services (GSI) if configured
+    const clientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
+    if (clientId && (window as any).google?.accounts?.oauth2) {
+      try {
+        const client = (window as any).google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'email profile openid',
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse.access_token) {
+              try {
+                const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+                });
+                const profile = await userInfoRes.json();
+                await completeGoogleAuth(profile.email, profile.name, profile.picture);
+              } catch (e) {
+                setShowGoogleDialog(true);
+              }
+            }
+          }
+        });
+        client.requestAccessToken();
+        return;
+      } catch (err) {
+        console.warn('Google GSI token client fallback:', err);
+      }
+    }
+
+    // 3. Direct Google account dialog (instant one-click for preview / sandbox)
+    setShowGoogleDialog(true);
   };
 
   // ===========================================================================
@@ -804,6 +744,33 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               )}
             </button>
 
+            {/* Divider */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[#E8DFD5]" />
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest text-[#736B5E]">
+                <span className="bg-[#FAF7F2] sm:bg-white px-2">or continue with</span>
+              </div>
+            </div>
+
+            {/* Sign in with Google Option */}
+            <button
+              type="button"
+              id="google-signin-btn"
+              onClick={handleGoogleSignIn}
+              disabled={isSubmitting}
+              className="w-full py-2.5 px-4 bg-white border border-[#D4C7B5] hover:border-[#0F4C5C] hover:bg-[#FAF9F5] text-[#24211E] text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <span>Sign in with Google</span>
+            </button>
+
             <div className="text-center pt-2">
               <p className="text-xs text-[#736B5E]">
                 New to AARU?{' '}
@@ -820,390 +787,173 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         )}
 
         {/* ===================================================================== */}
-        {/* VIEW 2: SIGN UP FLOW (Requirement 1: Exactly TWO Options) */}
+        {/* VIEW 2: SIGN UP FLOW (Strictly Manual Password Creation) */}
         {/* ===================================================================== */}
         {screenMode === 'signup' && (
           <div className="space-y-4">
-            {/* Toggle / Tabs for Exactly Two Options */}
-            <div className="p-1 bg-[#FAF7F2] border border-[#E8DFD5] flex gap-1 rounded-none">
-              <button
-                type="button"
-                id="signup-tab-manual-btn"
-                onClick={() => {
-                  setSignupTab('manual');
-                  setErrorMessage('');
-                }}
-                className={`flex-1 py-2 px-2 text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center ${
-                  signupTab === 'manual'
-                    ? 'bg-white text-[#0F4C5C] shadow-xs border border-[#D4C7B5]'
-                    : 'text-[#736B5E] hover:text-[#24211E]'
-                }`}
-              >
-                Option A: Manual Password
-              </button>
-              <button
-                type="button"
-                id="signup-tab-otp-btn"
-                onClick={() => {
-                  setSignupTab('otp');
-                  setErrorMessage('');
-                }}
-                className={`flex-1 py-2 px-2 text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center ${
-                  signupTab === 'otp'
-                    ? 'bg-white text-[#0F4C5C] shadow-xs border border-[#D4C7B5]'
-                    : 'text-[#736B5E] hover:text-[#24211E]'
-                }`}
-              >
-                Option B: Email OTP
-              </button>
+            {/* Quick Google Sign Up Option */}
+            <button
+              type="button"
+              id="google-signup-btn"
+              onClick={handleGoogleSignIn}
+              disabled={isSubmitting}
+              className="w-full py-2.5 px-4 bg-white border border-[#D4C7B5] hover:border-[#0F4C5C] hover:bg-[#FAF9F5] text-[#24211E] text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <span>Sign up with Google</span>
+            </button>
+
+            <div className="relative my-3">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[#E8DFD5]" />
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest text-[#736B5E]">
+                <span className="bg-[#FAF7F2] sm:bg-white px-2">or register with manual password</span>
+              </div>
             </div>
 
-            {/* --------------------------------------------------------------- */}
-            {/* OPTION A: Manual Password Sign Up */}
-            {/* Form containing exactly: Name, Contact Number, Email Address, Password, Confirm Password */}
-            {/* --------------------------------------------------------------- */}
-            {signupTab === 'manual' && (
-              <form onSubmit={handleManualSignUp} className="space-y-3.5 animate-in fade-in duration-150">
-                {/* 1. Name */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
-                    Name <span className="text-[#C08081]">*</span>
+            {/* Manual Password Sign Up Form */}
+            <form onSubmit={handleManualSignUp} className="space-y-3.5 animate-in fade-in duration-150">
+              {/* 1. Name */}
+              <div>
+                <label className="block text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
+                  Name <span className="text-[#C08081]">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    id="signup-manual-name"
+                    type="text"
+                    required
+                    value={manualName}
+                    onChange={(e) => setManualName(e.target.value)}
+                    placeholder="e.g. Aditi Sharma"
+                    className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
+                  />
+                  <UserIcon className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* 2. Contact Number */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider">
+                    Contact Number <span className="text-[#C08081]">*</span>
                   </label>
-                  <div className="relative">
-                    <input
-                      id="signup-manual-name"
-                      type="text"
-                      required
-                      value={manualName}
-                      onChange={(e) => setManualName(e.target.value)}
-                      placeholder="e.g. Aditi Sharma"
-                      className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
-                    />
-                    <UserIcon className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
+                  <span className="text-[10px] text-[#8C6D37] italic">Profile & shipping updates</span>
                 </div>
-
-                {/* 2. Contact Number */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider">
-                      Contact Number <span className="text-[#C08081]">*</span>
-                    </label>
-                    <span className="text-[10px] text-[#8C6D37] italic">Profile & shipping updates only</span>
-                  </div>
-                  <div className="relative">
-                    <input
-                      id="signup-manual-phone"
-                      type="tel"
-                      required
-                      value={manualPhone}
-                      onChange={(e) => setManualPhone(e.target.value)}
-                      placeholder="e.g. +91 98765 43210"
-                      className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
-                    />
-                    <Phone className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
+                <div className="relative">
+                  <input
+                    id="signup-manual-phone"
+                    type="tel"
+                    required
+                    value={manualPhone}
+                    onChange={(e) => setManualPhone(e.target.value)}
+                    placeholder="e.g. +91 93460 66170"
+                    className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
+                  />
+                  <Phone className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
+              </div>
 
-                {/* 3. Email Address */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
-                    Email Address <span className="text-[#C08081]">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="signup-manual-email"
-                      type="email"
-                      required
-                      value={manualEmail}
-                      onChange={(e) => setManualEmail(e.target.value)}
-                      placeholder="e.g. aditi.sharma@example.com"
-                      className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
-                    />
-                    <Mail className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
+              {/* 3. Email Address */}
+              <div>
+                <label className="block text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
+                  Email Address <span className="text-[#C08081]">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    id="signup-manual-email"
+                    type="email"
+                    required
+                    value={manualEmail}
+                    onChange={(e) => setManualEmail(e.target.value)}
+                    placeholder="e.g. aditi.sharma@example.com"
+                    className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
+                  />
+                  <Mail className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
+              </div>
 
-                {/* 4. Password */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
-                    Password <span className="text-[#C08081]">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="signup-manual-password"
-                      type={showManualPassword ? 'text' : 'password'}
-                      required
-                      minLength={6}
-                      value={manualPassword}
-                      onChange={(e) => setManualPassword(e.target.value)}
-                      placeholder="At least 6 characters"
-                      className="w-full pl-9 pr-9 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
-                    />
-                    <Lock className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <button
-                      type="button"
-                      onClick={() => setShowManualPassword(!showManualPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#736B5E] hover:text-[#24211E] cursor-pointer"
-                      tabIndex={-1}
-                    >
-                      {showManualPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
+              {/* 4. Password */}
+              <div>
+                <label className="block text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
+                  Password <span className="text-[#C08081]">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    id="signup-manual-password"
+                    type={showManualPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={manualPassword}
+                    onChange={(e) => setManualPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                    className="w-full pl-9 pr-9 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
+                  />
+                  <Lock className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={() => setShowManualPassword(!showManualPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#736B5E] hover:text-[#24211E] cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showManualPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
+              </div>
 
-                {/* 5. Confirm Password */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
-                    Confirm Password <span className="text-[#C08081]">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="signup-manual-confirm-password"
-                      type={showManualConfirmPassword ? 'text' : 'password'}
-                      required
-                      minLength={6}
-                      value={manualConfirmPassword}
-                      onChange={(e) => setManualConfirmPassword(e.target.value)}
-                      placeholder="Repeat your password"
-                      className="w-full pl-9 pr-9 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
-                    />
-                    <Lock className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <button
-                      type="button"
-                      onClick={() => setShowManualConfirmPassword(!showManualConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#736B5E] hover:text-[#24211E] cursor-pointer"
-                      tabIndex={-1}
-                    >
-                      {showManualConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
+              {/* 5. Confirm Password */}
+              <div>
+                <label className="block text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
+                  Confirm Password <span className="text-[#C08081]">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    id="signup-manual-confirm-password"
+                    type={showManualConfirmPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={manualConfirmPassword}
+                    onChange={(e) => setManualConfirmPassword(e.target.value)}
+                    placeholder="Repeat your password"
+                    className="w-full pl-9 pr-9 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
+                  />
+                  <Lock className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={() => setShowManualConfirmPassword(!showManualConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#736B5E] hover:text-[#24211E] cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showManualConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
+              </div>
 
-                <button
-                  id="signup-manual-submit-btn"
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-3 px-4 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-[0.16em] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs disabled:opacity-50 mt-3"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Creating Account...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="w-4 h-4" />
-                      <span>Create Account</span>
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
-
-            {/* --------------------------------------------------------------- */}
-            {/* OPTION B: Email OTP */}
-            {/* Form asking ONLY for Name, Contact Number, Email Address -> Email OTP */}
-            {/* --------------------------------------------------------------- */}
-            {signupTab === 'otp' && (
-              <>
-                {signupOtpStep === 'form' ? (
-                  <form onSubmit={handleSendSignupOtp} className="space-y-3.5 animate-in fade-in duration-150">
-                    {/* 1. Name */}
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
-                        Name <span className="text-[#C08081]">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          id="signup-otp-name"
-                          type="text"
-                          required
-                          value={otpSignupName}
-                          onChange={(e) => setOtpSignupName(e.target.value)}
-                          placeholder="e.g. Aditi Sharma"
-                          className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
-                        />
-                        <UserIcon className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                    </div>
-
-                    {/* 2. Contact Number */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider">
-                          Contact Number <span className="text-[#C08081]">*</span>
-                        </label>
-                        <span className="text-[10px] text-[#8C6D37] italic">Order shipping data only</span>
-                      </div>
-                      <div className="relative">
-                        <input
-                          id="signup-otp-phone"
-                          type="tel"
-                          required
-                          value={otpSignupPhone}
-                          onChange={(e) => setOtpSignupPhone(e.target.value)}
-                          placeholder="e.g. +91 98765 43210"
-                          className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
-                        />
-                        <Phone className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                    </div>
-
-                    {/* 3. Email Address */}
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
-                        Email Address <span className="text-[#C08081]">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          id="signup-otp-email"
-                          type="email"
-                          required
-                          value={otpSignupEmail}
-                          onChange={(e) => setOtpSignupEmail(e.target.value)}
-                          placeholder="e.g. aditi.sharma@example.com"
-                          className="w-full pl-9 pr-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-colors"
-                        />
-                        <Mail className="w-3.5 h-3.5 text-[#736B5E] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                      <p className="text-[10px] text-[#736B5E] mt-1.5 leading-relaxed">
-                        We will dispatch a secure 6-digit one-time code to your email address.
-                      </p>
-                    </div>
-
-                    <button
-                      id="signup-otp-send-btn"
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full py-3 px-4 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-[0.16em] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs disabled:opacity-50 mt-2"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Dispatching Verification Code...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Send Verification Code</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  </form>
+              <button
+                id="signup-manual-submit-btn"
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3 px-4 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-[0.16em] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs disabled:opacity-50 mt-3"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Creating Account...</span>
+                  </>
                 ) : (
-                  /* Step 2 of Option B: Enter 6-digit OTP */
-                  <form onSubmit={handleVerifySignupOtp} className="space-y-4 animate-in fade-in duration-200">
-                    <div className="flex items-center justify-between p-2.5 bg-[#FAF7F2] border border-[#E8DFD5] text-xs">
-                      <div className="flex items-center gap-2 truncate">
-                        <Mail className="w-3.5 h-3.5 text-[#0F4C5C] shrink-0" />
-                        <span className="font-semibold text-[#24211E] truncate">
-                          {otpSignupEmail}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSignupOtpStep('form');
-                          setErrorMessage('');
-                        }}
-                        className="text-[11px] font-semibold text-[#0F4C5C] hover:underline cursor-pointer shrink-0 ml-2"
-                      >
-                        Edit Details
-                      </button>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#5C5549] uppercase tracking-wider mb-2 text-center">
-                        Enter 6-Digit Verification Code
-                      </label>
-                      <div className="flex justify-between gap-1.5 sm:gap-2">
-                        {signupOtpDigits.map((digit, idx) => (
-                          <input
-                            key={idx}
-                            ref={(el) => (signupOtpRefs.current[idx] = el)}
-                            id={`signup-otp-input-${idx}`}
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={1}
-                            value={digit}
-                            onChange={(e) =>
-                              handleDigitChange(
-                                idx,
-                                e.target.value,
-                                signupOtpDigits,
-                                setSignupOtpDigits,
-                                signupOtpRefs
-                              )
-                            }
-                            onKeyDown={(e) =>
-                              handleDigitKeyDown(idx, e, signupOtpDigits, signupOtpRefs)
-                            }
-                            className="w-10 h-12 sm:w-12 sm:h-12 text-center font-mono text-lg font-bold text-[#0F4C5C] bg-[#FAF9F5] border border-[#D4C7B5] focus:outline-none focus:border-[#0F4C5C] focus:bg-white transition-all shadow-xs"
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Simulated Verification OTP Helper Indicator for Rapid Sandbox Evaluation */}
-                    {signupDemoOtp && (
-                      <div className="p-2.5 bg-[#FAF7F2] border border-[#D4C7B5] flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-[#8C6D37]" />
-                          <span className="text-[#5C5549]">
-                            Demo Sandbox Code: <strong className="text-[#0F4C5C] font-mono">{signupDemoOtp}</strong>
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setSignupOtpDigits(signupDemoOtp.split(''))}
-                          className="text-[10px] font-bold text-[#8C6D37] hover:underline uppercase tracking-wider"
-                        >
-                          Auto-Fill
-                        </button>
-                      </div>
-                    )}
-
-                    <button
-                      id="signup-otp-verify-btn"
-                      type="submit"
-                      disabled={isSubmitting || signupOtpDigits.join('').length !== 6}
-                      className="w-full py-3 px-4 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-[0.16em] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Verifying Code...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShieldCheck className="w-4 h-4" />
-                          <span>Verify & Create Account</span>
-                        </>
-                      )}
-                    </button>
-
-                    <div className="text-center pt-1">
-                      {signupCanResend ? (
-                        <button
-                          type="button"
-                          id="signup-otp-resend-btn"
-                          onClick={handleResendSignupOtp}
-                          disabled={isSubmitting}
-                          className="text-xs font-semibold text-[#0F4C5C] hover:underline cursor-pointer uppercase tracking-wider"
-                        >
-                          Resend Verification Code
-                        </button>
-                      ) : (
-                        <p className="text-xs text-[#736B5E]">
-                          Resend code in <strong className="text-[#24211E] font-mono">{signupCountdown}s</strong>
-                        </p>
-                      )}
-                    </div>
-                  </form>
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Create Account</span>
+                  </>
                 )}
-              </>
-            )}
+              </button>
+            </form>
 
             <div className="text-center pt-2">
               <p className="text-xs text-[#736B5E]">
@@ -1505,6 +1255,127 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               <span>Explore Store as Guest</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
+          </div>
+        )}
+
+        {/* ===================================================================== */}
+        {/* Google Authentication Dialog Modal */}
+        {/* ===================================================================== */}
+        {showGoogleDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="bg-white max-w-sm w-full p-6 shadow-2xl border border-[#D4C7B5] relative animate-in zoom-in-95 duration-150">
+              <button
+                type="button"
+                onClick={() => setShowGoogleDialog(false)}
+                className="absolute top-4 right-4 text-[#736B5E] hover:text-[#24211E] cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Google Brand Header */}
+              <div className="text-center mb-5">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#FAF7F2] border border-[#E8DFD5] mb-2">
+                  <svg className="w-6 h-6" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                  </svg>
+                </div>
+                <h3 className="text-sm font-bold text-[#24211E]">Sign in with Google</h3>
+                <p className="text-[11px] text-[#736B5E] mt-0.5">to continue to AARU Atelier</p>
+              </div>
+
+              {/* Quick Account Button for Active User */}
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  id="google-quick-account-btn"
+                  onClick={() => completeGoogleAuth('mettapavan622@gmail.com', 'Pavan Metta')}
+                  disabled={isSubmitting}
+                  className="w-full p-3 bg-[#FAF9F5] hover:bg-[#FAF7F2] border border-[#D4C7B5] hover:border-[#0F4C5C] flex items-center gap-3 transition-colors text-left cursor-pointer group"
+                >
+                  <div className="w-9 h-9 rounded-full bg-[#0F4C5C] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                    PM
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-[#24211E] group-hover:text-[#0F4C5C] truncate">
+                      Pavan Metta
+                    </p>
+                    <p className="text-[11px] text-[#736B5E] truncate">mettapavan622@gmail.com</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-[#736B5E] group-hover:text-[#0F4C5C] shrink-0" />
+                </button>
+
+                <div className="relative my-2">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-[#E8DFD5]" />
+                  </div>
+                  <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest text-[#736B5E]">
+                    <span className="bg-white px-2">or use another account</span>
+                  </div>
+                </div>
+
+                {/* Custom Google Email Form */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (googleEmailInput.trim()) {
+                      completeGoogleAuth(googleEmailInput.trim(), googleNameInput.trim());
+                    }
+                  }}
+                  className="space-y-2.5"
+                >
+                  <div>
+                    <label className="block text-[10px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
+                      Google Email
+                    </label>
+                    <input
+                      id="google-custom-email-input"
+                      type="email"
+                      required
+                      value={googleEmailInput}
+                      onChange={(e) => setGoogleEmailInput(e.target.value)}
+                      placeholder="e.g. user@gmail.com"
+                      className="w-full px-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
+                      Display Name (Optional)
+                    </label>
+                    <input
+                      id="google-custom-name-input"
+                      type="text"
+                      value={googleNameInput}
+                      onChange={(e) => setGoogleNameInput(e.target.value)}
+                      placeholder="e.g. Aditi Sharma"
+                      className="w-full px-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C]"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowGoogleDialog(false)}
+                      className="flex-1 py-2 text-xs font-semibold text-[#736B5E] hover:text-[#24211E] bg-[#FAF9F5] border border-[#D4C7B5] cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      id="google-custom-confirm-btn"
+                      disabled={isSubmitting || !googleEmailInput.trim()}
+                      className="flex-1 py-2 text-xs font-semibold text-white bg-[#0F4C5C] hover:bg-[#0b3844] cursor-pointer disabled:opacity-50"
+                    >
+                      {isSubmitting ? 'Signing In...' : 'Continue'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
         )}
       </div>

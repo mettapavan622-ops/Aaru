@@ -743,7 +743,7 @@ export const INITIAL_ORDERS: Order[] = [
     userId: 'user-demo-1',
     customerName: 'Aditi Sharma',
     customerEmail: 'aditi.sharma@example.com',
-    customerPhone: '+91 98765 43210',
+    customerPhone: '+91 93460 66170',
     items: [
       {
         product: INITIAL_PRODUCTS[1],
@@ -760,7 +760,7 @@ export const INITIAL_ORDERS: Order[] = [
       city: 'Bengaluru',
       state: 'Karnataka',
       pincode: '560001',
-      phone: '+91 98765 43210',
+      phone: '+91 93460 66170',
       isDefault: true
     },
     subtotal: 26800,
@@ -789,7 +789,7 @@ export const INITIAL_ORDERS: Order[] = [
       orderNumber: 'AARU-2026-89420',
       customerName: 'Aditi Sharma',
       customerEmail: 'aditi.sharma@example.com',
-      customerPhone: '+91 98765 43210',
+      customerPhone: '+91 93460 66170',
       requestType: 'Return',
       reason: 'Sizing or Fit Issue (Blouse fit too snug at bust)',
       clientNote: 'Exquisite silk weave and craftsmanship, requesting reverse pickup for return.',
@@ -821,7 +821,7 @@ export const INITIAL_ORDERS: Order[] = [
     userId: 'user-demo-1',
     customerName: 'Aditi Sharma',
     customerEmail: 'aditi.sharma@example.com',
-    customerPhone: '+91 98765 43210',
+    customerPhone: '+91 93460 66170',
     items: [
       {
         product: INITIAL_PRODUCTS[0],
@@ -838,7 +838,7 @@ export const INITIAL_ORDERS: Order[] = [
       city: 'Bengaluru',
       state: 'Karnataka',
       pincode: '560001',
-      phone: '+91 98765 43210',
+      phone: '+91 93460 66170',
       isDefault: true
     },
     subtotal: 28900,

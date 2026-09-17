@@ -10,7 +10,7 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
   className = ""
 }) => {
   const encodedMessage = encodeURIComponent(customMessage);
-  const whatsappUrl = `https://api.whatsapp.com/send?phone=919876543210&text=${encodedMessage}`;
+  const whatsappUrl = `https://api.whatsapp.com/send?phone=919346066170&text=${encodedMessage}`;
 
   return (
     <a
@@ -18,8 +18,8 @@ export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
       href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Chat with AARU on WhatsApp"
-      title="Chat with AARU on WhatsApp"
+      aria-label="Chat with AARU on WhatsApp: +91 93460 66170"
+      title="Chat with AARU on WhatsApp (+91 93460 66170)"
       className={`fixed bottom-6 right-6 z-40 w-14 h-14 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-full shadow-2xl transition-all duration-300 hover:scale-110 flex items-center justify-center border-2 border-white/80 group cursor-pointer ${className}`}
     >
       <div className="relative flex items-center justify-center">

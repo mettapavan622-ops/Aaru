@@ -1,0 +1,116 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile document containing authentication and contact details",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user",
+          "maxLength": 256
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the user",
+          "maxLength": 128
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number",
+          "maxLength": 32
+        },
+        "role": {
+          "type": "string",
+          "description": "User role authorization level",
+          "enum": ["customer", "admin"],
+          "maxLength": 32
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Profile picture URL",
+          "maxLength": 1024
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account registration timestamp",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last profile update timestamp",
+          "maxLength": 64
+        }
+      },
+      "required": ["id", "email", "name", "role", "createdAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Order records placed by patrons",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique order identifier",
+          "maxLength": 128
+        },
+        "orderNumber": {
+          "type": "string",
+          "description": "Human readable order reference number",
+          "maxLength": 64
+        },
+        "customerId": {
+          "type": "string",
+          "description": "UID of the patron who placed the order",
+          "maxLength": 128
+        },
+        "customerEmail": {
+          "type": "string",
+          "description": "Customer contact email",
+          "maxLength": 256
+        },
+        "customerName": {
+          "type": "string",
+          "description": "Customer full name",
+          "maxLength": 128
+        },
+        "customerPhone": {
+          "type": "string",
+          "description": "Customer delivery contact phone",
+          "maxLength": 32
+        },
+        "total": {
+          "type": "number",
+          "description": "Total order amount in INR"
+        },
+        "status": {
+          "type": "string",
+          "description": "Order fulfillment status",
+          "enum": ["confirmed", "processing", "shipped", "delivered", "cancelled"],
+          "maxLength": 32
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Order placement timestamp",
+          "maxLength": 64
+        }
+      },
+      "required": ["id", "orderNumber", "customerId", "total", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores user profiles with role and profile metadata"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Stores customer purchase orders"
+    }
+  }
+}

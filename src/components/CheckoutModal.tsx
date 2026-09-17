@@ -58,7 +58,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     city: 'Bengaluru',
     state: 'Karnataka',
     pincode: '560001',
-    phone: '+91 98765 43210',
+    phone: '+91 93460 66170',
     isDefault: true
   });
 
@@ -343,7 +343,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         prefill: {
           name: address.name || userName,
           email: userEmail,
-          contact: address.phone.replace(/[^0-9+]/g, '') || '+919876543210'
+          contact: address.phone.replace(/[^0-9+]/g, '') || '+919346066170'
         },
         notes: {
           address: `${address.street}, ${address.city}, ${address.state} - ${address.pincode}`,
@@ -461,7 +461,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
   };
 
-  const whatsappSupportUrl = `https://wa.me/919876543210?text=${encodeURIComponent(
+  const whatsappSupportUrl = `https://wa.me/919346066170?text=${encodeURIComponent(
     `Hello AARU Concierge, I have an inquiry regarding my order ${createdOrder?.orderNumber || 'checkout'}.`
   )}`;
 
@@ -850,7 +850,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   className="px-5 py-2.5 bg-[#2D5A46] text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-2"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  WhatsApp Support
+                  WhatsApp Support (+91 93460 66170)
                 </a>
 
                 <button
