@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { AaruLogo, AaruEmblem } from './AaruLogo';
-import { signInWithGooglePopup } from '../firebase';
 import { 
   Mail, 
   Lock, 
@@ -57,11 +56,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [manualConfirmPassword, setManualConfirmPassword] = useState('');
   const [showManualPassword, setShowManualPassword] = useState(false);
   const [showManualConfirmPassword, setShowManualConfirmPassword] = useState(false);
-
-  // Google Authentication States
-  const [showGoogleDialog, setShowGoogleDialog] = useState(false);
-  const [googleEmailInput, setGoogleEmailInput] = useState('mettapavan622@gmail.com');
-  const [googleNameInput, setGoogleNameInput] = useState('Pavan Metta');
 
   // Forgot Password Form States
   const [forgotEmail, setForgotEmail] = useState('');
@@ -288,107 +282,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  // ===========================================================================
-  // Google Authentication Integration (One-Tap / Client-side token & API gateway)
-  // ===========================================================================
-  const completeGoogleAuth = async (email: string, name?: string, picture?: string) => {
-    setIsSubmitting(true);
-    setErrorMessage('');
-    setSuccessToast('');
-
-    try {
-      const response = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          name: name?.trim() || email.split('@')[0],
-          picture: picture || ''
-        })
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Google authentication failed.');
-      }
-
-      localStorage.setItem('aaru_user_session', JSON.stringify(data.user));
-      if (data.token) {
-        localStorage.setItem('aaru_auth_token', data.token);
-      }
-
-      setSuccessToast(data.message || `Welcome to AARU Atelier, ${data.user.name}!`);
-      setShowGoogleDialog(false);
-
-      setTimeout(() => {
-        onLoginSuccess(data.user, {
-          cart: data.cart || [],
-          wishlist: data.wishlist || [],
-          orders: data.orders || []
-        });
-        if (onClose) onClose();
-      }, 400);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Google sign-in could not be completed.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setErrorMessage('');
-    setSuccessToast('');
-
-    // 1. Try Firebase Authentication with Google Popup
-    try {
-      setIsSubmitting(true);
-      const { fbUser } = await signInWithGooglePopup();
-      if (fbUser && fbUser.email) {
-        await completeGoogleAuth(
-          fbUser.email,
-          fbUser.displayName || undefined,
-          fbUser.photoURL || undefined
-        );
-        return;
-      }
-    } catch (err: any) {
-      console.warn('Firebase Google Sign-in Notice (checking fallback):', err);
-    } finally {
-      setIsSubmitting(false);
-    }
-
-    // 2. Try Google Identity Services (GSI) if configured
-    const clientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
-    if (clientId && (window as any).google?.accounts?.oauth2) {
-      try {
-        const client = (window as any).google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: 'email profile openid',
-          callback: async (tokenResponse: any) => {
-            if (tokenResponse.access_token) {
-              try {
-                const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
-                });
-                const profile = await userInfoRes.json();
-                await completeGoogleAuth(profile.email, profile.name, profile.picture);
-              } catch (e) {
-                setShowGoogleDialog(true);
-              }
-            }
-          }
-        });
-        client.requestAccessToken();
-        return;
-      } catch (err) {
-        console.warn('Google GSI token client fallback:', err);
-      }
-    }
-
-    // 3. Direct Google account dialog (instant one-click for preview / sandbox)
-    setShowGoogleDialog(true);
   };
 
   // ===========================================================================
@@ -744,33 +637,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               )}
             </button>
 
-            {/* Divider */}
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[#E8DFD5]" />
-              </div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest text-[#736B5E]">
-                <span className="bg-[#FAF7F2] sm:bg-white px-2">or continue with</span>
-              </div>
-            </div>
-
-            {/* Sign in with Google Option */}
-            <button
-              type="button"
-              id="google-signin-btn"
-              onClick={handleGoogleSignIn}
-              disabled={isSubmitting}
-              className="w-full py-2.5 px-4 bg-white border border-[#D4C7B5] hover:border-[#0F4C5C] hover:bg-[#FAF9F5] text-[#24211E] text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
-            >
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-              </svg>
-              <span>Sign in with Google</span>
-            </button>
-
             <div className="text-center pt-2">
               <p className="text-xs text-[#736B5E]">
                 New to AARU?{' '}
@@ -791,32 +657,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         {/* ===================================================================== */}
         {screenMode === 'signup' && (
           <div className="space-y-4">
-            {/* Quick Google Sign Up Option */}
-            <button
-              type="button"
-              id="google-signup-btn"
-              onClick={handleGoogleSignIn}
-              disabled={isSubmitting}
-              className="w-full py-2.5 px-4 bg-white border border-[#D4C7B5] hover:border-[#0F4C5C] hover:bg-[#FAF9F5] text-[#24211E] text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-xs disabled:opacity-50"
-            >
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-              </svg>
-              <span>Sign up with Google</span>
-            </button>
-
-            <div className="relative my-3">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[#E8DFD5]" />
-              </div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest text-[#736B5E]">
-                <span className="bg-[#FAF7F2] sm:bg-white px-2">or register with manual password</span>
-              </div>
-            </div>
-
             {/* Manual Password Sign Up Form */}
             <form onSubmit={handleManualSignUp} className="space-y-3.5 animate-in fade-in duration-150">
               {/* 1. Name */}
@@ -1255,127 +1095,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               <span>Explore Store as Guest</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
-          </div>
-        )}
-
-        {/* ===================================================================== */}
-        {/* Google Authentication Dialog Modal */}
-        {/* ===================================================================== */}
-        {showGoogleDialog && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-            <div className="bg-white max-w-sm w-full p-6 shadow-2xl border border-[#D4C7B5] relative animate-in zoom-in-95 duration-150">
-              <button
-                type="button"
-                onClick={() => setShowGoogleDialog(false)}
-                className="absolute top-4 right-4 text-[#736B5E] hover:text-[#24211E] cursor-pointer"
-                aria-label="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              {/* Google Brand Header */}
-              <div className="text-center mb-5">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#FAF7F2] border border-[#E8DFD5] mb-2">
-                  <svg className="w-6 h-6" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                  </svg>
-                </div>
-                <h3 className="text-sm font-bold text-[#24211E]">Sign in with Google</h3>
-                <p className="text-[11px] text-[#736B5E] mt-0.5">to continue to AARU Atelier</p>
-              </div>
-
-              {/* Quick Account Button for Active User */}
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  id="google-quick-account-btn"
-                  onClick={() => completeGoogleAuth('mettapavan622@gmail.com', 'Pavan Metta')}
-                  disabled={isSubmitting}
-                  className="w-full p-3 bg-[#FAF9F5] hover:bg-[#FAF7F2] border border-[#D4C7B5] hover:border-[#0F4C5C] flex items-center gap-3 transition-colors text-left cursor-pointer group"
-                >
-                  <div className="w-9 h-9 rounded-full bg-[#0F4C5C] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                    PM
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-[#24211E] group-hover:text-[#0F4C5C] truncate">
-                      Pavan Metta
-                    </p>
-                    <p className="text-[11px] text-[#736B5E] truncate">mettapavan622@gmail.com</p>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-[#736B5E] group-hover:text-[#0F4C5C] shrink-0" />
-                </button>
-
-                <div className="relative my-2">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-[#E8DFD5]" />
-                  </div>
-                  <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest text-[#736B5E]">
-                    <span className="bg-white px-2">or use another account</span>
-                  </div>
-                </div>
-
-                {/* Custom Google Email Form */}
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (googleEmailInput.trim()) {
-                      completeGoogleAuth(googleEmailInput.trim(), googleNameInput.trim());
-                    }
-                  }}
-                  className="space-y-2.5"
-                >
-                  <div>
-                    <label className="block text-[10px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
-                      Google Email
-                    </label>
-                    <input
-                      id="google-custom-email-input"
-                      type="email"
-                      required
-                      value={googleEmailInput}
-                      onChange={(e) => setGoogleEmailInput(e.target.value)}
-                      placeholder="e.g. user@gmail.com"
-                      className="w-full px-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C]"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-semibold text-[#5C5549] uppercase tracking-wider mb-1">
-                      Display Name (Optional)
-                    </label>
-                    <input
-                      id="google-custom-name-input"
-                      type="text"
-                      value={googleNameInput}
-                      onChange={(e) => setGoogleNameInput(e.target.value)}
-                      placeholder="e.g. Aditi Sharma"
-                      className="w-full px-3 py-2 bg-[#FAF9F5] border border-[#D4C7B5] text-xs text-[#24211E] focus:outline-none focus:border-[#0F4C5C]"
-                    />
-                  </div>
-
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowGoogleDialog(false)}
-                      className="flex-1 py-2 text-xs font-semibold text-[#736B5E] hover:text-[#24211E] bg-[#FAF9F5] border border-[#D4C7B5] cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      id="google-custom-confirm-btn"
-                      disabled={isSubmitting || !googleEmailInput.trim()}
-                      className="flex-1 py-2 text-xs font-semibold text-white bg-[#0F4C5C] hover:bg-[#0b3844] cursor-pointer disabled:opacity-50"
-                    >
-                      {isSubmitting ? 'Signing In...' : 'Continue'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
           </div>
         )}
       </div>

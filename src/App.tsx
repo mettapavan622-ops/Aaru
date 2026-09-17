@@ -45,7 +45,6 @@ import { AuthScreen } from './components/AuthScreen';
 import { WhatsAppButton } from './components/WhatsAppButton';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { PolicyPage, PolicyType } from './components/PolicyPages';
-import { auth, firebaseSignOut } from './firebase';
 
 export default function App() {
   // Authentication State: Loaded from verified session
@@ -216,7 +215,6 @@ export default function App() {
     setCurrentDashboard('user');
     setActiveUserView('home');
     setIsGuestBrowsing(false);
-    firebaseSignOut(auth).catch(() => {});
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   };
 
