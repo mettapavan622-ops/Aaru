@@ -6,7 +6,6 @@ import {
   User as UserIcon, 
   Menu, 
   X, 
-  MessageCircle, 
   ChevronDown, 
   SlidersHorizontal,
   Package, 
@@ -132,8 +131,6 @@ export const Header: React.FC<HeaderProps> = ({
     { label: 'Shop the Look', id: 'shop-the-look' },
     { label: 'Customised Clothing', id: 'custom-clothing' }
   ];
-
-  const whatsappUrl = "https://wa.me/919346066170?text=Hello%20AARU%20Atelier,%20I%20am%20exploring%20your%20collection%20online%20and%20need%20styling%20assistance.";
 
   return (
     <header className="sticky top-0 z-30 w-full bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#E8DFD5] transition-all">
@@ -296,19 +293,6 @@ export const Header: React.FC<HeaderProps> = ({
               Cart
             </span>
           </button>
-
-          {/* WhatsApp Direct Care (Desktop) */}
-          <a
-            id="header-whatsapp-btn"
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="WhatsApp Care: +91 93460 66170"
-            className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-[#075E54] bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 transition-colors"
-          >
-            <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" />
-            <span>+91 93460 66170</span>
-          </a>
 
           {/* Account Dropdown */}
           <div className="relative" ref={accountMenuRef}>
@@ -945,20 +929,9 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             </nav>
 
-            {/* Mobile Pushdown Actions: WhatsApp & Admin Dashboard */}
-            <div className="pt-3 border-t border-[#E8DFD5] space-y-2.5">
-              <a
-                id="mobile-whatsapp-btn"
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full min-h-[44px] px-4 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span>WhatsApp Care: +91 93460 66170</span>
-              </a>
-
-              {currentUser?.role === 'admin' && (
+            {/* Mobile Pushdown Actions: Admin Dashboard */}
+            {currentUser?.role === 'admin' && (
+              <div className="pt-3 border-t border-[#E8DFD5] space-y-2.5">
                 <button
                   id="mobile-admin-switch-btn"
                   type="button"
@@ -971,8 +944,8 @@ export const Header: React.FC<HeaderProps> = ({
                   <SlidersHorizontal className="w-4 h-4" />
                   <span>Admin Dashboard</span>
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}

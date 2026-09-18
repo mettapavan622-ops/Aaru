@@ -369,7 +369,6 @@ export const Footer: React.FC<{
               <li><button type="button" onClick={() => handleNav('custom-clothing')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Customised Clothing Studio</button></li>
               <li><button type="button" onClick={handleOpenOrders} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Track Order Status</button></li>
               <li><button type="button" onClick={() => handleNav('shop-the-look')} className="hover:text-[#E8B4B8] transition-colors cursor-pointer text-left">Shop the Lookbook</button></li>
-              <li><a href="https://wa.me/919346066170" target="_blank" rel="noopener noreferrer" className="hover:text-[#E8B4B8] transition-colors flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5 text-emerald-400" /> WhatsApp Stylist (+91 93460 66170)</a></li>
             </ul>
           </div>
 
@@ -418,18 +417,6 @@ export const Footer: React.FC<{
                 >
                   Terms of Use
                 </button>
-              </li>
-              <li>
-                <a
-                  href="https://wa.me/919346066170?text=Hello%20AARU%20Customer%20Care,%20I%20need%20assistance"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  id="footer-whatsapp-support-btn"
-                  className="hover:text-[#E8B4B8] transition-colors flex items-center gap-2 cursor-pointer pt-0.5"
-                >
-                  <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>WhatsApp Support: +91 93460 66170</span>
-                </a>
               </li>
             </ul>
           </div>

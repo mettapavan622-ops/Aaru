@@ -80,16 +80,6 @@ export const FounderStorySection: React.FC<FounderStorySectionProps> = ({ onDisc
                 Discover the Story & Studio
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
-
-              <a
-                href="https://wa.me/919346066170?text=Hello%20Moni,%20I%20would%20love%20to%20know%20more%20about%20your%20signature%20handloom%20creations."
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Request Founder Consultation on WhatsApp (+91 93460 66170)"
-                className="px-6 py-3 border border-[#9C7C38] text-[#9C7C38] hover:bg-[#E8B4B8] hover:text-black hover:border-[#E8B4B8] text-xs font-semibold uppercase tracking-[0.16em] transition-colors cursor-pointer"
-              >
-                Request Founder Consultation (+91 93460 66170)
-              </a>
             </div>
           </div>
         </div>
