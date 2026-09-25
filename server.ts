@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
 // Load .env without overriding environment secrets injected by the container platform
 dotenv.config();
+import http from 'http';
+import { WebSocketServer, WebSocket } from 'ws';
 import express, { Request, Response } from 'express';
 import path from 'path';
 import crypto from 'crypto';
@@ -8,7 +10,7 @@ import fs from 'fs';
 import multer from 'multer';
 import Razorpay from 'razorpay';
 import { createServer as createViteServer } from 'vite';
-import { INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_ANNOUNCEMENT, CATEGORIES, COLLECTIONS, INITIAL_COUPONS } from './src/data/mockData';
+import { INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_ANNOUNCEMENT, CATEGORIES, COLLECTIONS, INITIAL_COUPONS, LOOKBOOK_ITEMS } from './src/data/mockData';
 import { Product, Order, CustomClothingRequest, AnnouncementSettings, CustomerInquiry, ReturnExchangeRequest, PromoCode, ReturnTrackingStepStatus } from './src/types';
 
 // Razorpay Payment Gateway Configuration
@@ -266,16 +268,40 @@ function getUserOrders(user: DbUser): Order[] {
   );
 }
 
-// Catalog synchronization state & SSE broadcasting
+// Catalog synchronization state & Real-Time broadcasting (WebSocket & SSE)
 let catalogVersion = Date.now();
 const sseCatalogClients: Set<Response> = new Set();
+let wssInstance: WebSocketServer | null = null;
 
-function broadcastCatalogUpdate() {
+function broadcastCatalogUpdate(eventPayload?: Record<string, any>) {
   catalogVersion = Date.now();
-  const payload = `data: ${JSON.stringify({ type: 'CATALOG_UPDATED', version: catalogVersion, count: products.length, products })}\n\n`;
+  const event = {
+    type: 'CATALOG_UPDATED',
+    version: catalogVersion,
+    count: products.length,
+    products,
+    ...eventPayload
+  };
+  const jsonStr = JSON.stringify(event);
+
+  // Broadcast to all active WebSocket clients (instant multi-user synchronization)
+  if (wssInstance) {
+    wssInstance.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        try {
+          client.send(jsonStr);
+        } catch (err) {
+          console.warn('[WS Broadcast Error]:', err);
+        }
+      }
+    });
+  }
+
+  // Broadcast to all active SSE clients
+  const ssePayload = `data: ${jsonStr}\n\n`;
   for (const client of sseCatalogClients) {
     try {
-      client.write(payload);
+      client.write(ssePayload);
     } catch {
       sseCatalogClients.delete(client);
     }
@@ -591,7 +617,7 @@ async function startServer() {
       };
 
       products.unshift(newProduct);
-      broadcastCatalogUpdate();
+      broadcastCatalogUpdate({ type: 'PRODUCT_CREATED', product: newProduct });
       res.status(201).json(newProduct);
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to create product' });
@@ -732,7 +758,7 @@ async function startServer() {
       id // preserve ID
     };
 
-    broadcastCatalogUpdate();
+    broadcastCatalogUpdate({ type: 'PRODUCT_UPDATED', product: products[index] });
     res.json(products[index]);
   });
 
@@ -744,7 +770,7 @@ async function startServer() {
     if (products.length === initialLen) {
       return res.status(404).json({ error: 'Product not found' });
     }
-    broadcastCatalogUpdate();
+    broadcastCatalogUpdate({ type: 'PRODUCT_DELETED', productId: id });
     res.json({ success: true, message: 'Product removed from catalog' });
   });
 
@@ -757,6 +783,20 @@ async function startServer() {
     res.json(COLLECTIONS);
   });
 
+  // Curated Lookbook Ensembles with Thematic Filtering Backend Query (?theme=Bridal%20Legacy)
+  app.get('/api/lookbook', (req: Request, res: Response) => {
+    const { theme } = req.query;
+    if (theme && typeof theme === 'string' && theme.toLowerCase() !== 'all') {
+      const filtered = LOOKBOOK_ITEMS.filter(l => 
+        (l.theme && l.theme.toLowerCase() === theme.toLowerCase()) ||
+        l.tagline.toLowerCase().includes(theme.toLowerCase()) ||
+        l.title.toLowerCase().includes(theme.toLowerCase())
+      );
+      return res.json(filtered);
+    }
+    res.json(LOOKBOOK_ITEMS);
+  });
+
   // Announcement & Sale Alerts
   app.get('/api/cms/announcement', (req: Request, res: Response) => {
     res.json(announcement);
@@ -767,6 +807,7 @@ async function startServer() {
       ...announcement,
       ...req.body
     };
+    broadcastCatalogUpdate({ type: 'ANNOUNCEMENT_UPDATED', announcement });
     res.json(announcement);
   };
 
@@ -1331,6 +1372,7 @@ async function startServer() {
     if (trackingNumber) order.trackingNumber = trackingNumber;
     if (courierName) order.courierName = courierName;
 
+    broadcastCatalogUpdate({ type: 'ORDER_STATUS_UPDATED', order });
     res.json(order);
   });
 
@@ -2370,7 +2412,32 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const httpServer = http.createServer(app);
+
+  // Initialize WebSocket Server for Real-Time Multi-User Synchronization
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws/catalog' });
+  wssInstance = wss;
+
+  wss.on('connection', (ws) => {
+    // Send initial catalog and announcement state on connect
+    try {
+      ws.send(JSON.stringify({
+        type: 'INIT',
+        version: catalogVersion,
+        count: products.length,
+        products,
+        announcement
+      }));
+    } catch (err) {
+      console.warn('[WS Initial Send Error]:', err);
+    }
+
+    ws.on('error', (err) => {
+      console.warn('[WS Socket Error]:', err);
+    });
+  });
+
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`AARU Luxury E-Commerce Engine running on http://localhost:${PORT}`);
   });
 }

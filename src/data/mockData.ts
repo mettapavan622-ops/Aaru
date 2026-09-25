@@ -877,6 +877,7 @@ export const LOOKBOOK_ITEMS: LookbookItem[] = [
     subtitle: 'Kavya Banarasi Saree styled with beaten antique temple jewelry',
     image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1200&q=85',
     tagline: 'An ode to timeless grace',
+    theme: 'Bridal Legacy',
     productId: 'prod-001',
     productName: 'Kavya Emerald Banarasi Tissue Saree',
     price: '₹28,900',
@@ -916,6 +917,7 @@ export const LOOKBOOK_ITEMS: LookbookItem[] = [
     subtitle: 'Noor Pale Rose Saree with pearl drop veil',
     image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=1200&q=85',
     tagline: 'Ethereal lightness for twilight celebrations',
+    theme: 'Festive Grandeur',
     productId: 'prod-002',
     productName: 'Noor Pale Rose Organza Saree',
     price: '₹26,800',
@@ -955,6 +957,7 @@ export const LOOKBOOK_ITEMS: LookbookItem[] = [
     subtitle: 'Six-Fold Midnight Kanjeevaram with handcrafted bullion tassels',
     image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1200&q=85',
     tagline: 'Precision engineered by founder Moni',
+    theme: 'Regal Evening',
     productId: 'prod-003',
     productName: 'Moni Six-Fold Midnight Kanjeevaram',
     price: '₹39,500',
@@ -985,6 +988,161 @@ export const LOOKBOOK_ITEMS: LookbookItem[] = [
         name: 'Chandrika Metallic Silver Tissue Saree',
         role: 'Silver Tissue Layering Stole',
         price: '₹28,500'
+      }
+    ]
+  },
+  {
+    id: 'look-4',
+    title: 'The Imperial Vows',
+    subtitle: 'Pure Crimson Katan Silk Saree with beaten zardozi borders and heirloom kamarbandh',
+    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1200&q=85',
+    tagline: 'Majestic crimson heirlooms for the sacred muhurtham',
+    theme: 'Bridal Legacy',
+    productId: 'prod-004',
+    productName: 'Vaidehi Royal Crimson Silk Saree',
+    price: '₹34,500',
+    hotspots: [
+      {
+        id: 'hs-4-1',
+        x: 50,
+        y: 60,
+        productId: 'prod-004',
+        name: 'Vaidehi Royal Crimson Silk Saree',
+        role: 'Bridal Muhurtham Drape',
+        price: '₹34,500'
+      },
+      {
+        id: 'hs-4-2',
+        x: 48,
+        y: 28,
+        productId: 'prod-008',
+        name: 'Royal Heritage Kundan Polki Necklace',
+        role: 'Imperial Bridal Polki',
+        price: '₹48,000'
+      }
+    ]
+  },
+  {
+    id: 'look-5',
+    title: 'Nocturne Radiance',
+    subtitle: 'Deep Indigo Chanderi Silk ensemble accented with antique silver bullion motifs',
+    image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1200&q=85',
+    tagline: 'Sculptural elegance for high-gala soirées',
+    theme: 'Regal Evening',
+    productId: 'prod-006',
+    productName: 'Sitara Midnight Indigo Silk Set',
+    price: '₹22,500',
+    hotspots: [
+      {
+        id: 'hs-5-1',
+        x: 52,
+        y: 55,
+        productId: 'prod-006',
+        name: 'Sitara Midnight Indigo Silk Set',
+        role: 'Silk Evening Ensemble',
+        price: '₹22,500'
+      },
+      {
+        id: 'hs-5-2',
+        x: 35,
+        y: 40,
+        productId: 'prod-010',
+        name: 'Zardozi Embroidered Silk Potli',
+        role: 'Evening Artisan Potli',
+        price: '₹6,500'
+      }
+    ]
+  },
+  {
+    id: 'look-6',
+    title: 'Diwali Swarna Weave',
+    subtitle: 'Lustrous Mustard Gold Tissue Saree with real zari temple borders',
+    image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=1200&q=85',
+    tagline: 'Radiant festive opulence steeped in ancestral heritage',
+    theme: 'Festive Grandeur',
+    productId: 'prod-005',
+    productName: 'Surya Gold Zari Kadwa Brocade Saree',
+    price: '₹31,000',
+    hotspots: [
+      {
+        id: 'hs-6-1',
+        x: 50,
+        y: 55,
+        productId: 'prod-005',
+        name: 'Surya Gold Zari Kadwa Brocade Saree',
+        role: 'Auspicious Festive Drape',
+        price: '₹31,000'
+      },
+      {
+        id: 'hs-6-2',
+        x: 50,
+        y: 20,
+        productId: 'prod-009',
+        name: 'Temple Carved Jhumkas in 22K Gold Finish',
+        role: 'Carved 22K Gold Jhumkas',
+        price: '₹12,500'
+      }
+    ]
+  },
+  {
+    id: 'look-7',
+    title: 'The Contemporary Luminary',
+    subtitle: 'Metallic Silver Tissue Saree with sharp structural silhouette and minimalist silver accents',
+    image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=1200&q=85',
+    tagline: 'Modern sculpted drapes for cocktail soirées',
+    theme: 'Cocktail & Contemporary',
+    productId: 'prod-014',
+    productName: 'Chandrika Metallic Silver Tissue Saree',
+    price: '₹28,500',
+    hotspots: [
+      {
+        id: 'hs-7-1',
+        x: 52,
+        y: 58,
+        productId: 'prod-014',
+        name: 'Chandrika Metallic Silver Tissue Saree',
+        role: 'Sculpted Tissue Drape',
+        price: '₹28,500'
+      },
+      {
+        id: 'hs-7-2',
+        x: 48,
+        y: 25,
+        productId: 'prod-009',
+        name: 'Temple Carved Jhumkas in 22K Gold Finish',
+        role: 'Statement Accent',
+        price: '₹12,500'
+      }
+    ]
+  },
+  {
+    id: 'look-8',
+    title: 'Heirloom Shikargah Brocade',
+    subtitle: 'Rare antique gold brocade woven with ancient hunting and floral motifs from the Varanasi archive',
+    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1200&q=85',
+    tagline: 'Museum-caliber weaves handed down across generations',
+    theme: 'Heritage Heirloom',
+    productId: 'prod-001',
+    productName: 'Kavya Emerald Banarasi Tissue Saree',
+    price: '₹28,900',
+    hotspots: [
+      {
+        id: 'hs-8-1',
+        x: 50,
+        y: 60,
+        productId: 'prod-001',
+        name: 'Kavya Emerald Banarasi Tissue Saree',
+        role: 'Archival Heritage Brocade',
+        price: '₹28,900'
+      },
+      {
+        id: 'hs-8-2',
+        x: 48,
+        y: 25,
+        productId: 'prod-016',
+        name: 'Meenakari Antique Temple Choker Ensemble',
+        role: 'Antique Temple Jewels',
+        price: '₹18,500'
       }
     ]
   }

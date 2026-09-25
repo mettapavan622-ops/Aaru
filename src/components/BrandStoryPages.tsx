@@ -332,7 +332,7 @@ export const Footer: React.FC<{
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10 pb-12 border-b border-[#262626]">
           {/* Col 1: Brand & Manifesto - Generous 4 cols on desktop */}
           <div className="sm:col-span-2 lg:col-span-4 space-y-4 pr-0 lg:pr-4">
-            <AaruLogo size="md" variant="dark" />
+            <AaruLogo size="lg" variant="dark" layout="horizontal" />
             <p className="text-xs text-[#C4B7A5] font-light leading-relaxed max-w-sm">
               A luxury women’s fashion and textile house. Designed around the sixth element — intuition, softness, power, confidence, strength, and protection.
             </p>

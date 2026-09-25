@@ -24,17 +24,25 @@ export const ShopTheLookPage: React.FC<ShopTheLookPageProps> = ({
 }) => {
   const [selectedTag, setSelectedTag] = useState<string>('All');
 
-  const tags = ['All', 'Bridal Legacy', 'Regal Evening', 'Festive Grandeur', 'Contemporary Minimal'];
+  const tags: Array<'All' | 'Bridal Legacy' | 'Regal Evening' | 'Festive Grandeur' | 'Cocktail & Contemporary' | 'Heritage Heirloom'> = [
+    'All',
+    'Bridal Legacy',
+    'Regal Evening',
+    'Festive Grandeur',
+    'Cocktail & Contemporary',
+    'Heritage Heirloom'
+  ];
 
   const filteredLooks = selectedTag === 'All'
     ? LOOKBOOK_ITEMS
     : LOOKBOOK_ITEMS.filter(l => 
+        l.theme === selectedTag ||
         l.tagline.toLowerCase().includes(selectedTag.toLowerCase()) || 
         l.title.toLowerCase().includes(selectedTag.toLowerCase())
       );
 
   return (
-    <div id="shop-to-look-collection-page" className="min-h-screen bg-[#FAF7F2] py-8 lg:py-14 animate-in fade-in duration-300">
+    <div id="shop-the-look-collection-page" className="min-h-screen bg-[#FAF7F2] py-8 lg:py-14 animate-in fade-in duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Navigation Breadcrumb */}

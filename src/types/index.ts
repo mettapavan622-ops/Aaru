@@ -288,12 +288,20 @@ export interface LookHotspot {
   price: string;
 }
 
+export type LookTheme = 
+  | 'Bridal Legacy' 
+  | 'Regal Evening' 
+  | 'Festive Grandeur' 
+  | 'Cocktail & Contemporary' 
+  | 'Heritage Heirloom';
+
 export interface LookbookItem {
   id: string;
   title: string;
   subtitle: string;
   image: string;
   tagline: string;
+  theme?: LookTheme;
   productId: string;
   productName: string;
   price: string;

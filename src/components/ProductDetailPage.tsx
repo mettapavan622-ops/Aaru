@@ -3,7 +3,6 @@ import { Product, ProductVariant } from '../types';
 import { 
   Heart, 
   ShoppingBag, 
-  MessageCircle, 
   Sparkles, 
   ShieldCheck, 
   Truck, 
@@ -140,9 +139,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
     setAddedAnimation(true);
     setTimeout(() => setAddedAnimation(false), 2000);
   };
-
-  const whatsappInquiryMessage = `Hello AARU Studio, I am inquiring about the ${product.title} (SKU: ${selectedVariant.sku}, Size: ${selectedVariant.size}). Price: ₹${(product.salePrice || product.price).toLocaleString('en-IN')}. Is this available for styling consultation?`;
-  const whatsappUrl = `https://wa.me/919346066170?text=${encodeURIComponent(whatsappInquiryMessage)}`;
 
   const toggleAccordion = (id: string) => {
     setOpenAccordion(openAccordion === id ? null : id);
@@ -367,17 +363,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                   <Heart className={`w-5 h-5 ${isWishlisted ? 'fill-[#C08081]' : ''}`} />
                 </button>
               </div>
-
-              {/* Direct WhatsApp Consultation Button with Muted Rose Hover Effect */}
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-2.5 px-4 bg-white border border-[#2D5A46] text-[#2D5A46] hover:bg-[#E8B4B8] hover:text-black hover:border-[#E8B4B8] text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer"
-              >
-                <MessageCircle className="w-4 h-4" />
-                Ask Stylist on WhatsApp (+91 93460 66170)
-              </a>
             </div>
 
             {/* Quick Guarantees */}

@@ -38,6 +38,7 @@ import {
 } from './components/BrandStoryPages';
 import { CartDrawer } from './components/CartDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
+import { realtimeSync, RealtimeSyncEvent } from './services/realtimeSync';
 import { OrderHistoryModal } from './components/OrderHistoryModal';
 import { WishlistDrawer } from './components/WishlistDrawer';
 import { AuthModal } from './components/AuthModal';
@@ -160,6 +161,9 @@ export default function App() {
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [coupons, setCoupons] = useState<PromoCode[]>([]);
 
+  // Real-Time Live Notification Toast
+  const [liveUpdateNotice, setLiveUpdateNotice] = useState<string | null>(null);
+
   const fetchCoupons = async () => {
     try {
       const res = await fetch('/api/coupons');
@@ -265,6 +269,89 @@ export default function App() {
         })
         .catch(() => {});
     }
+  }, []);
+
+  // Real-Time Admin-to-User Synchronization Engine (WebSocket + SSE + Cross-Tab)
+  useEffect(() => {
+    const showLiveNotice = (msg: string) => {
+      setLiveUpdateNotice(msg);
+      setTimeout(() => setLiveUpdateNotice(null), 3500);
+    };
+
+    const unsubscribe = realtimeSync.subscribe((event: RealtimeSyncEvent) => {
+      // 1. Full Catalog Refresh / Initialization
+      if (event.type === 'INIT' || event.type === 'CATALOG_UPDATED') {
+        if (Array.isArray(event.products) && event.products.length > 0) {
+          setProducts(event.products);
+          setSelectedProduct(prev => {
+            if (!prev) return event.products![0];
+            return event.products!.find(p => p.id === prev.id) || prev;
+          });
+        }
+        if (event.announcement) {
+          setAnnouncement(event.announcement);
+        }
+      }
+
+      // 2. Real-Time Product Update (e.g. inventory, price, sale, availability)
+      if (event.type === 'PRODUCT_UPDATED' && event.product) {
+        const updated = event.product;
+        setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
+        
+        // Instantly reflect on PDP if currently viewed by active user
+        setSelectedProduct(prev => prev?.id === updated.id ? updated : prev);
+
+        // Instantly reflect on Cart items if in user's active bag
+        setCartItems(prev => prev.map(item => {
+          if (item.product.id === updated.id) {
+            const matchedVariant = updated.variants.find(v => v.id === item.variant.id) || item.variant;
+            return {
+              ...item,
+              product: updated,
+              variant: matchedVariant
+            };
+          }
+          return item;
+        }));
+
+        showLiveNotice(`Catalog updated: "${updated.title}" changes reflected live.`);
+      }
+
+      // 3. Real-Time Product Creation
+      if (event.type === 'PRODUCT_CREATED' && event.product) {
+        const created = event.product;
+        setProducts(prev => {
+          if (prev.some(p => p.id === created.id)) return prev;
+          return [created, ...prev];
+        });
+        showLiveNotice(`New arrival: "${created.title}" added to the boutique.`);
+      }
+
+      // 4. Real-Time Product Deletion
+      if (event.type === 'PRODUCT_DELETED' && event.productId) {
+        const pid = event.productId;
+        setProducts(prev => prev.filter(p => p.id !== pid));
+        setSelectedProduct(prev => prev?.id === pid ? null : prev);
+        setCartItems(prev => prev.filter(item => item.product.id !== pid));
+        showLiveNotice('A piece was archived and updated across all storefronts.');
+      }
+
+      // 5. Real-Time Order Status Update
+      if (event.type === 'ORDER_STATUS_UPDATED' && event.order) {
+        const updatedOrder = event.order;
+        setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+        showLiveNotice(`Order #${updatedOrder.id.slice(-6).toUpperCase()} status updated to ${updatedOrder.status}.`);
+      }
+
+      // 6. Real-Time Announcement Update
+      if (event.type === 'ANNOUNCEMENT_UPDATED' && event.announcement) {
+        setAnnouncement(event.announcement);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Persist shopping cart changes to backend for authenticated patron
@@ -501,6 +588,7 @@ export default function App() {
       if (selectedProduct?.id === updated.id) {
         setSelectedProduct(updated);
       }
+      realtimeSync.broadcastLocally({ type: 'PRODUCT_UPDATED', product: updated });
     } else {
       // Create new
       const res = await fetch('/api/products', {
@@ -510,6 +598,7 @@ export default function App() {
       });
       const created = await res.json();
       setProducts(prev => [created, ...prev]);
+      realtimeSync.broadcastLocally({ type: 'PRODUCT_CREATED', product: created });
     }
   };
 
@@ -517,6 +606,7 @@ export default function App() {
     if (!confirm('Are you sure you want to remove this piece from the atelier catalog?')) return;
     await fetch(`/api/products/${productId}`, { method: 'DELETE' });
     setProducts(prev => prev.filter(p => p.id !== productId));
+    realtimeSync.broadcastLocally({ type: 'PRODUCT_DELETED', productId });
   };
 
   const handleAdminUpdateAnnouncement = async (newSettings: Partial<AnnouncementSettings>) => {
@@ -527,6 +617,7 @@ export default function App() {
     });
     const updated = await res.json();
     setAnnouncement(updated);
+    realtimeSync.broadcastLocally({ type: 'ANNOUNCEMENT_UPDATED', announcement: updated });
   };
 
   const handleAdminUpdateOrderStatus = async (
@@ -541,6 +632,7 @@ export default function App() {
     });
     const updated = await res.json();
     setOrders(prev => prev.map(o => o.id === orderId ? updated : o));
+    realtimeSync.broadcastLocally({ type: 'ORDER_STATUS_UPDATED', order: updated });
   };
 
   const handleRefreshOrders = async () => {
@@ -1040,6 +1132,18 @@ export default function App() {
         onClose={() => setIsAuthModalOpen(false)}
         onLoginSuccess={handleAuthSuccess}
       />
+
+      {/* Real-Time Atelier Live Sync Toast Notification */}
+      {liveUpdateNotice && (
+        <aside aria-label="Real-time live synchronization notification" className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-3 duration-300 max-w-sm pointer-events-none">
+          <div className="bg-[#0F4C5C] text-white px-4 py-2.5 shadow-xl border border-white/20 flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            <span className="text-xs font-medium tracking-wide">
+              {liveUpdateNotice}
+            </span>
+          </div>
+        </aside>
+      )}
     </div>
   );
 }
