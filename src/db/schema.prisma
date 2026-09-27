@@ -1,0 +1,319 @@
+// AARU E-Commerce Platform — Prisma Schema
+// PostgreSQL Relational Database Schema
+// Supporting Catalog, Variants, Orders, Customization, CMS, and Marketing
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  ATELIER_MANAGER
+}
+
+enum OrderStatus {
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum GarmentType {
+  SAREE_AND_BLOUSE
+  BRIDAL_LEHENGA
+  ANARKALI_GOWN
+  FESTIVE_KURTA_SET
+  BESPOKE_INDO_WESTERN
+}
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  phone         String?         @unique
+  fullName      String?
+  role          Role            @default(CUSTOMER)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  addresses     Address[]
+  orders        Order[]
+  wishlists     Wishlist[]
+  customInquiries CustomInquiry[]
+
+  @@map("users")
+}
+
+model Address {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName    String
+  phone       String
+  street      String
+  apartment   String?
+  city        String
+  state       String
+  pincode     String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  orders      Order[]
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Collection {
+  id          String    @id @default(uuid())
+  title       String
+  slug        String    @unique
+  tagline     String?
+  description String?
+  heroImage   String
+  accentColor String?
+  isFeatured  Boolean   @default(false)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  products    Product[]
+
+  @@map("collections")
+}
+
+model Product {
+  id                String            @id @default(uuid())
+  title             String
+  slug              String            @unique
+  subtitle          String?
+  categoryId        String
+  category          Category          @relation(fields: [categoryId], references: [id])
+  collectionId      String?
+  collection        Collection?       @relation(fields: [collectionId], references: [id])
+  
+  // Pricing & Status
+  basePrice         Decimal           @db.Decimal(10, 2)
+  salePrice         Decimal?          @db.Decimal(10, 2)
+  isOnSale          Boolean           @default(false)
+  isReadyToShip     Boolean           @default(false)
+  isFeatured        Boolean           @default(false)
+  isActive          Boolean           @default(true)
+  
+  // Editorial & Craft Details
+  description       String            @db.Text
+  fabric            String
+  craft             String
+  careInstructions  String            @db.Text
+  fitAndSizeInfo    String            @db.Text
+  shippingPolicy    String?           @db.Text
+  returnPolicy      String?           @db.Text
+  
+  // Media & SEO
+  images            String[]          // Primary and gallery URLs
+  metaTitle         String?
+  metaDescription   String?
+  canonicalUrl      String?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  variants          ProductVariant[]
+  orderItems        OrderItem[]
+  wishlistItems     WishlistItem[]
+
+  @@index([categoryId])
+  @@index([collectionId])
+  @@index([isReadyToShip])
+  @@index([isOnSale])
+  @@map("products")
+}
+
+model ProductVariant {
+  id            String      @id @default(uuid())
+  productId     String
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size          String      // XS, S, M, L, XL, Free Size, Custom
+  color         String
+  colorCode     String      // Hex color code for swatch UI
+  sku           String      @unique
+  inventory     Int         @default(0)
+  isAvailable   Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  orderItems    OrderItem[]
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model Wishlist {
+  id          String         @id @default(uuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+  items       WishlistItem[]
+
+  @@unique([userId])
+  @@map("wishlists")
+}
+
+model WishlistItem {
+  id          String    @id @default(uuid())
+  wishlistId  String
+  wishlist    Wishlist  @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  addedAt     DateTime  @default(now())
+
+  @@unique([wishlistId, productId])
+  @@map("wishlist_items")
+}
+
+model Order {
+  id              String         @id @default(uuid())
+  orderNumber     String         @unique
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  shippingAddressId String
+  shippingAddress Address        @relation(fields: [shippingAddressId], references: [id])
+  
+  subtotal        Decimal        @db.Decimal(10, 2)
+  discount        Decimal        @default(0) @db.Decimal(10, 2)
+  shippingFee     Decimal        @default(0) @db.Decimal(10, 2)
+  tax             Decimal        @default(0) @db.Decimal(10, 2)
+  total           Decimal        @db.Decimal(10, 2)
+  
+  status          OrderStatus    @default(CONFIRMED)
+  paymentStatus   PaymentStatus  @default(PENDING)
+  paymentMethod   String         // UPI, Card, NetBanking, Razorpay
+  paymentId       String?        // Razorpay Payment / Transaction ID
+  
+  courierName     String?
+  trackingNumber  String?
+  estimatedDelivery DateTime?
+  canCancel       Boolean        @default(true)
+  canReturn       Boolean        @default(false)
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  items           OrderItem[]
+  trackingEvents  OrderTrackingEvent[]
+
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String          @id @default(uuid())
+  orderId         String
+  order           Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product         @relation(fields: [productId], references: [id])
+  variantId       String
+  variant         ProductVariant  @relation(fields: [variantId], references: [id])
+  
+  quantity        Int             @default(1)
+  unitPrice       Decimal         @db.Decimal(10, 2)
+  totalPrice      Decimal         @db.Decimal(10, 2)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model OrderTrackingEvent {
+  id          String       @id @default(uuid())
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status      OrderStatus
+  title       String
+  description String?
+  location    String?
+  timestamp   DateTime     @default(now())
+
+  @@index([orderId])
+  @@map("order_tracking_events")
+}
+
+model CustomInquiry {
+  id                String       @id @default(uuid())
+  userId            String?
+  user              User?        @relation(fields: [userId], references: [id])
+  customerName      String
+  customerPhone     String
+  customerEmail     String
+  garmentType       GarmentType
+  fabricPreference  String
+  colorPreference   String
+  measurements      Json         // Bust, Waist, Hip, Shoulder, Blouse Length, Height
+  specialNotes      String?      @db.Text
+  budgetRange       String?
+  status            String       @default("New")
+  createdAt         DateTime     @default(now())
+
+  @@map("custom_inquiries")
+}
+
+model PromoCode {
+  id              String    @id @default(uuid())
+  code            String    @unique
+  discountPercent Int
+  maxDiscount     Decimal?  @db.Decimal(10, 2)
+  minOrderValue   Decimal   @default(0) @db.Decimal(10, 2)
+  description     String
+  isActive        Boolean   @default(true)
+  startsAt        DateTime  @default(now())
+  expiresAt       DateTime?
+  usageCount      Int       @default(0)
+
+  @@map("promo_codes")
+}
+
+model CMSAnnouncement {
+  id            String    @id @default(uuid())
+  text          String
+  linkText      String?
+  linkUrl       String?
+  isActive      Boolean   @default(true)
+  isSaleActive  Boolean   @default(false)
+  saleHighlight String?
+  updatedAt     DateTime  @updatedAt
+
+  @@map("cms_announcements")
+}

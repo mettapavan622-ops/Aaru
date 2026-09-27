@@ -1,0 +1,7 @@
+{
+  "name": "AARU — A Woman's Sixth Element",
+  "description": "Premium women's fashion and textile digital storefront combining editorial storytelling, bespoke customization, and comprehensive commerce admin dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@layer base {
+  :root, body, * {
+    font-variant-numeric: lining-nums tabular-nums;
+    -webkit-font-feature-settings: "lnum" 1, "tnum" 1;
+    -moz-font-feature-settings: "lnum" 1, "tnum" 1;
+    font-feature-settings: "lnum" 1, "tnum" 1;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #FAF9F5;
+    color: #24211E;
+    overflow-x: hidden;
+  }
+}
+
+.font-serif {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-variant-numeric: lining-nums tabular-nums;
+  -webkit-font-feature-settings: "lnum" 1, "tnum" 1;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+}
+
+.font-sans {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum" 1;
+}
+
+.font-cinzel {
+  font-family: 'Cinzel', 'Cormorant Garamond', Georgia, serif;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum" 1;
+}
+
+.font-telugu {
+  font-family: 'Noto Serif Telugu', 'Tenali Ramakrishna', 'Suranna', 'Gautami', 'Nirmala UI', serif;
+}
+
+/* Explicit price and numeric classes enforcing crisp, modern lining digits */
+.font-price, .font-num, .price-value {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  font-variant-numeric: lining-nums tabular-nums !important;
+  -webkit-font-feature-settings: "lnum" 1, "tnum" 1 !important;
+  font-feature-settings: "lnum" 1, "tnum" 1 !important;
+}
+
+/* Custom scrollbar for luxury editorial feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF7F2;
+}
+::-webkit-scrollbar-thumb {
+  background: #D4C7B5;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A89882;
+}
+

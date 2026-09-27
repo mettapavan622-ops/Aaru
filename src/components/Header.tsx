@@ -1,0 +1,905 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  Search, 
+  ShoppingBag, 
+  Heart, 
+  User as UserIcon, 
+  Menu, 
+  X, 
+  ChevronDown, 
+  SlidersHorizontal,
+  Package, 
+  LogOut, 
+  ArrowRight, 
+  Sparkles,
+  ShieldCheck,
+  ChevronRight,
+  Phone,
+  Mail,
+  LogIn,
+  UserPlus
+} from 'lucide-react';
+import { Product, AnnouncementSettings, User, Category } from '../types';
+import { CategoriesMegaMenu } from './CategoriesMegaMenu';
+import { CATEGORIES } from '../data/mockData';
+import { AaruLogo, AaruEmblem } from './AaruLogo';
+
+interface HeaderProps {
+  announcement: AnnouncementSettings;
+  cartCount: number;
+  wishlistCount: number;
+  currentUser: User | null;
+  activeTab?: string;
+  activeView?: string;
+  setActiveTab?: (tab: string) => void;
+  onNavigate?: (tab: any) => void;
+  onOpenCart: () => void;
+  onOpenWishlist: () => void;
+  onOpenAuth: (mode?: 'login' | 'signup') => void;
+  onSignOut?: () => void;
+  onOpenOrders: () => void;
+  onSearchSelect?: (product: Product) => void;
+  products?: Product[];
+  categories?: Category[];
+  onSelectCategory?: (categoryName: string) => void;
+  currentMode?: 'user' | 'admin';
+  currentRole?: 'user' | 'admin';
+  onToggleMode?: (mode: 'user' | 'admin') => void;
+  onRoleSwitch?: (mode: 'user' | 'admin') => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({
+  announcement,
+  cartCount,
+  wishlistCount,
+  currentUser,
+  activeTab: propActiveTab,
+  activeView,
+  setActiveTab: propSetActiveTab,
+  onNavigate,
+  onOpenCart,
+  onOpenWishlist,
+  onOpenAuth,
+  onSignOut = () => {},
+  onOpenOrders,
+  onSearchSelect,
+  products = [],
+  categories = CATEGORIES,
+  onSelectCategory,
+  currentMode: propCurrentMode,
+  currentRole,
+  onToggleMode: propOnToggleMode,
+  onRoleSwitch
+}) => {
+  const currentMode = propCurrentMode || currentRole || 'user';
+  const onToggleMode = propOnToggleMode || onRoleSwitch || (() => {});
+  const activeTab = propActiveTab || activeView || 'home';
+  const setActiveTab = (tab: string) => {
+    if (propSetActiveTab) propSetActiveTab(tab);
+    if (onNavigate) onNavigate(tab);
+  };
+
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileCategoriesOpen, setIsMobileCategoriesOpen] = useState(false);
+  const [isCategoriesMenuOpen, setIsCategoriesMenuOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+  const categoriesMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Close menus on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
+        setIsAccountMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Search filtered results (safely guarded against undefined fields)
+  const searchResults = searchQuery.trim() === '' ? [] : (products || []).filter(p => {
+    if (!p) return false;
+    const q = searchQuery.toLowerCase();
+    return Boolean(
+      (p.title && p.title.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q)) ||
+      (p.collection && p.collection.toLowerCase().includes(q)) ||
+      (p.fabric && p.fabric.toLowerCase().includes(q))
+    );
+  }).slice(0, 5);
+
+  const navItems = [
+    { label: 'Home', id: 'home' },
+    { label: 'Just In', id: 'just-in' },
+    { label: 'Designer Wear', id: 'designer-wear' },
+    { label: 'Collections', id: 'collections' },
+    { label: 'Categories', id: 'categories' },
+    { label: 'Ready to Ship', id: 'ready-to-ship' },
+    { label: 'Sarees – Ready to Ship', id: 'sarees-rts' },
+    { label: 'Sale', id: 'sale', isSale: true },
+    { label: 'Shop the Look', id: 'shop-the-look' },
+    { label: 'Customised Clothing', id: 'custom-clothing' }
+  ];
+
+  return (
+    <header className="sticky top-0 z-30 w-full bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#E8DFD5] transition-all">
+      {/* Top Accent Strip: Rich royal navy bar as seen in brand imagery */}
+      <div className="h-1 w-full bg-gradient-to-r from-[#072F38] via-[#0F4C5C] to-[#072F38]" />
+
+      {/* Dynamic Announcement Bar */}
+      {announcement.isActive && (
+        <div className="bg-[#0F4C5C] text-[#FAF7F2] text-[11px] md:text-xs tracking-wider py-1.5 px-4 text-center border-b border-[#0F4C5C]/40">
+          <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
+            {announcement.isSaleActive && (
+              <span className="bg-[#C08081] text-white text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-none">
+                Exclusive
+              </span>
+            )}
+            <p className="truncate font-light text-[#FAF7F2]">
+              {announcement.text}
+            </p>
+            {announcement.linkText && (
+              <button 
+                type="button" 
+                onClick={() => setActiveTab('sale')}
+                className="underline underline-offset-4 hover:text-[#D4C7B5] font-medium transition-colors ml-1 cursor-pointer"
+              >
+                {announcement.linkText}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Main Luxury Header Bar: 
+          Arranged with Brand Logo on the Left, Expansive Search Bar in the Center, and Utility Actions on the Right */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5">
+        <div className="flex items-center justify-between gap-3 sm:gap-6 relative">
+          
+          {/* ZONE 1 (LEFT):
+              - Prominent AARU Brand Logo in its rightful place!
+              - Mobile: Menu Toggle Button placed beside the Brand Logo with balanced spacing */}
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0 mr-2 sm:mr-4 md:mr-6">
+            {/* Mobile Menu Toggle Button */}
+            <button
+              id="mobile-menu-toggle"
+              type="button"
+              aria-label="Toggle Navigation Menu"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-1.5 sm:p-2 text-[#24211E] md:hidden hover:text-[#0F4C5C] -ml-1 rounded-sm active:bg-[#E8DFD5]/40 transition-colors cursor-pointer shrink-0"
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5 sm:w-6 sm:h-6" /> : <Menu className="w-5 h-5 sm:w-6 sm:h-6" />}
+            </button>
+
+            {/* Brand Logo without tagline and with responsive dimensions */}
+            <div 
+              id="aaru-logo"
+              onClick={() => setActiveTab('home')}
+              className="cursor-pointer group select-none py-1 flex items-center shrink-0 max-w-[150px] xs:max-w-[180px] sm:max-w-[220px] md:max-w-[260px] lg:max-w-[300px]"
+            >
+              <AaruLogo 
+                size="responsive" 
+                layout="left" 
+              />
+            </div>
+          </div>
+
+          {/* ZONE 2 (CENTER):
+              - Dedicated, Expansive Search Bar in its rightful place!
+              - Prominent centered position with ample breathing room and autocomplete results */}
+          <div className="hidden md:flex flex-1 max-w-md lg:max-w-lg xl:max-w-xl mx-auto relative">
+            <div className="relative w-full">
+              <input
+                id="desktop-search-input"
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search handcrafted sarees, lehengas, silk drapes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchOpen(true)}
+                className="w-full pl-9 pr-7 py-2 bg-white border border-[#D4C7B5] focus:border-[#0F4C5C] focus:bg-white text-xs text-[#24211E] placeholder:text-[#8A8175] focus:outline-none transition-all shadow-2xs"
+              />
+              <Search className="w-4 h-4 text-[#8C6D37] absolute left-2.5 top-2.5 pointer-events-none" />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-xs text-gray-400 hover:text-gray-700 cursor-pointer"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Desktop Search Autocomplete Dropdown */}
+            {isSearchOpen && searchQuery.trim() !== '' && (
+              <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-[#D4C7B5] shadow-xl z-50 p-2 divide-y divide-[#E8DFD5]">
+                {searchResults.length > 0 ? (
+                  <div>
+                    <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-[#8C6D37]">
+                      Matching Products ({searchResults.length})
+                    </div>
+                    {searchResults.map(prod => (
+                      <div
+                        key={prod.id}
+                        onClick={() => {
+                          if (onSearchSelect) onSearchSelect(prod);
+                          setIsSearchOpen(false);
+                          setSearchQuery('');
+                        }}
+                        className="p-2 hover:bg-[#FAF7F2] cursor-pointer flex items-center gap-3 transition-colors"
+                      >
+                        <img 
+                          src={prod.images[0]} 
+                          alt={prod.title} 
+                          className="w-10 h-12 object-cover rounded-none bg-[#F5EFE6]" 
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-serif font-semibold text-[#24211E] truncate">{prod.title}</p>
+                          <p className="text-[11px] text-[#736B5E]">{prod.category} • ₹{prod.price.toLocaleString('en-IN')}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center">
+                    <p className="text-xs text-[#736B5E]">No matching weaves found for "{searchQuery}".</p>
+                    <p className="text-[11px] text-[#8C6D37] mt-1">Try searching for "Banarasi", "Organza", "Saree", or "Silk".</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ZONE 3 (RIGHT):
+              - Balanced width matching left side on desktop
+              - Wishlist, Cart with Counter, and User Account Dropdown */}
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 lg:gap-3 shrink-0">
+            {/* Wishlist Button */}
+            <button
+              id="header-wishlist-btn"
+              type="button"
+              aria-label={`Wishlist (${wishlistCount} items)`}
+              onClick={onOpenWishlist}
+              className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] relative transition-colors rounded-sm cursor-pointer"
+            >
+              <Heart className="w-5 h-5" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 sm:top-0 sm:right-0 min-w-[17px] h-[17px] px-1 rounded-full bg-[#C08081] text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
+                  {wishlistCount}
+                </span>
+              )}
+            </button>
+
+            {/* Cart Button */}
+            <button
+              id="header-cart-btn"
+              type="button"
+              aria-label={`Shopping Cart (${cartCount} items)`}
+              onClick={onOpenCart}
+              className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] relative flex items-center gap-1.5 transition-colors rounded-sm cursor-pointer"
+            >
+              <ShoppingBag className="w-5 h-5" />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 sm:top-0 sm:right-0 min-w-[17px] h-[17px] px-1 rounded-full bg-[#0F4C5C] text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
+                  {cartCount}
+                </span>
+              )}
+              <span className="hidden lg:inline text-xs font-semibold text-[#24211E]">
+                Cart
+              </span>
+            </button>
+
+            {/* Account Menu */}
+            <div className="relative" ref={accountMenuRef}>
+              <button
+                id="account-dropdown-btn"
+                type="button"
+                aria-label="Account options"
+                onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+                className="p-1.5 sm:p-2 text-[#24211E] hover:text-[#0F4C5C] flex items-center gap-1 transition-colors rounded-sm"
+              >
+                <UserIcon className="w-5 h-5" />
+                <ChevronDown className="w-3.5 h-3.5 hidden sm:block text-[#8A8175]" />
+              </button>
+
+              {isAccountMenuOpen && (
+                <div 
+                  id="account-dropdown-menu"
+                  className="absolute right-0 mt-2 w-72 bg-white border border-[#E8DFD5] shadow-2xl z-50 overflow-hidden divide-y divide-[#E8DFD5]"
+                >
+                  {currentUser ? (
+                    <>
+                      {/* User Profile Details: Name, Mobile, Mail ID */}
+                      <div className="p-4 bg-[#FAF7F2]">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-full bg-[#0F4C5C] text-white flex items-center justify-center font-serif text-base font-bold shadow-xs shrink-0">
+                            {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'A'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-serif font-bold text-[#24211E] truncate">{currentUser.name}</p>
+                            <span className="inline-block px-1.5 py-0.5 text-[9px] font-sans font-semibold tracking-wider uppercase bg-[#0F4C5C]/10 text-[#0F4C5C] mt-0.5">
+                              {currentUser.role === 'admin' ? 'Store Administrator' : 'Privilege Client'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Contact Credentials: Phone and Mail */}
+                        <div className="space-y-1.5 pt-2.5 border-t border-[#E8DFD5]/80 text-[11px]">
+                          <div className="flex items-center gap-2 text-[#5C5549]">
+                            <Phone className="w-3.5 h-3.5 text-[#8C6D37] shrink-0" />
+                            <span className="text-[#8C6D37] font-medium">Mobile:</span>
+                            <span className="font-mono text-[#24211E] font-medium truncate">
+                              {currentUser.phone || '+91 93460 66170'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[#5C5549]">
+                            <Mail className="w-3.5 h-3.5 text-[#8C6D37] shrink-0" />
+                            <span className="text-[#8C6D37] font-medium">Email:</span>
+                            <span className="text-[#24211E] font-medium truncate">
+                              {currentUser.email}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Navigation Actions */}
+                      <div className="py-1">
+                        {currentUser.role === 'admin' && (
+                          <button
+                            id="account-admin-link"
+                            type="button"
+                            onClick={() => {
+                              if (onToggleMode) onToggleMode('admin');
+                              setIsAccountMenuOpen(false);
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[#9C7C38] hover:bg-[#FAF7F2] flex items-center justify-between cursor-pointer transition-colors border-b border-[#E8DFD5]/70"
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <SlidersHorizontal className="w-4 h-4 text-[#9C7C38]" />
+                              <span>Admin Dashboard</span>
+                            </span>
+                            <ArrowRight className="w-3.5 h-3.5 text-[#9C7C38]" />
+                          </button>
+                        )}
+                        <button
+                          id="account-orders-link"
+                          type="button"
+                          onClick={() => {
+                            onOpenOrders();
+                            setIsAccountMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-xs font-semibold text-[#24211E] hover:bg-[#FAF7F2] flex items-center justify-between cursor-pointer transition-colors"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <Package className="w-4 h-4 text-[#0F4C5C]" />
+                            <span>Your Orders & Tracking</span>
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5 text-[#8A8175]" />
+                        </button>
+                      </div>
+
+                      {/* Sign Out Action */}
+                      <div className="py-1">
+                        <button
+                          id="account-signout-btn"
+                          type="button"
+                          onClick={() => {
+                            onSignOut();
+                            setIsAccountMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-xs font-semibold text-[#C08081] hover:bg-rose-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Guest State: Clear SignIn & SignUp Options */}
+                      <div className="p-4 bg-[#FAF7F2]">
+                        <div className="flex items-center gap-2 mb-1">
+                          <UserIcon className="w-4 h-4 text-[#0F4C5C]" />
+                          <p className="text-xs font-serif font-bold text-[#24211E] tracking-wide">Welcome to AARU</p>
+                        </div>
+                        <p className="text-[11px] text-[#736B5E] leading-relaxed">
+                          Sign in to track orders in real-time or create an account for personalized styling consultations.
+                        </p>
+                      </div>
+
+                      <div className="p-3 space-y-2">
+                        {/* Option 1: Sign In */}
+                        <button
+                          id="header-signin-btn"
+                          type="button"
+                          onClick={() => {
+                            onOpenAuth('login');
+                            setIsAccountMenuOpen(false);
+                          }}
+                          className="w-full py-2.5 px-4 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                        >
+                          <LogIn className="w-3.5 h-3.5" />
+                          <span>Sign In</span>
+                        </button>
+
+                        {/* Option 2: Sign Up */}
+                        <button
+                          id="header-signup-btn"
+                          type="button"
+                          onClick={() => {
+                            onOpenAuth('signup');
+                            setIsAccountMenuOpen(false);
+                          }}
+                          className="w-full py-2.5 px-4 bg-white hover:bg-[#FAF7F2] border border-[#0F4C5C] text-[#0F4C5C] text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          <span>Sign Up / Register</span>
+                        </button>
+                      </div>
+
+                      <div className="px-4 py-2 bg-white text-[10px] text-[#8C6D37] flex items-center justify-center gap-1.5 border-t border-[#E8DFD5]/60">
+                        <ShieldCheck className="w-3 h-3 text-[#8C6D37]" />
+                        <span>Instant Mobile OTP & Access</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Dedicated Mobile Search Bar Row (Ensures space for search on mobile without crowding the centered logo) */}
+        <div className="md:hidden mt-2.5 pt-2 border-t border-[#E8DFD5]/60 relative">
+          <div className="relative w-full">
+            <input
+              ref={mobileSearchInputRef}
+              type="text"
+              placeholder="Search handcrafted sarees, silks, lehengas..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 bg-white/90 border border-[#D4C7B5] focus:border-[#0F4C5C] text-xs text-[#24211E] placeholder:text-[#8A8175] focus:outline-none transition-all shadow-2xs"
+            />
+            <Search className="w-4 h-4 text-[#8C6D37] absolute left-3 top-2.5 pointer-events-none" />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2.5 text-xs text-[#8A8175] hover:text-[#24211E]"
+                aria-label="Clear mobile search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Mobile Search Autocomplete Dropdown */}
+          {searchQuery.trim() !== '' && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#D4C7B5] shadow-xl z-50 p-2 divide-y divide-[#E8DFD5] max-h-72 overflow-y-auto">
+              {searchResults.length > 0 ? (
+                <div>
+                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#8C6D37]">
+                    Matching Creations ({searchResults.length})
+                  </div>
+                  {searchResults.map(prod => (
+                    <div
+                      key={prod.id}
+                      onClick={() => {
+                        if (onSearchSelect) onSearchSelect(prod);
+                        setSearchQuery('');
+                      }}
+                      className="p-2 hover:bg-[#FAF7F2] cursor-pointer flex items-center gap-3 transition-colors"
+                    >
+                      <img 
+                        src={prod.images[0]} 
+                        alt={prod.title} 
+                        className="w-10 h-12 object-cover bg-[#F5EFE6]" 
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-serif font-semibold text-[#24211E] truncate">{prod.title}</p>
+                        <p className="text-[11px] text-[#736B5E]">{prod.category} • ₹{prod.price.toLocaleString('en-IN')}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-3 text-center">
+                  <p className="text-xs text-[#736B5E]">No matching weaves found for "{searchQuery}".</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tier 2: Category & Curated Navigation (Desktop) */}
+      <nav className="hidden lg:block border-t border-[#E8DFD5]/60 bg-[#FAF7F2] relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ul className="flex items-center justify-center gap-6 py-2.5 text-xs font-medium uppercase tracking-[0.14em] text-[#4A4339]">
+            <li>
+              <button
+                id="nav-link-home"
+                type="button"
+                onClick={() => setActiveTab('home')}
+                className={`relative py-1 transition-all cursor-pointer ${
+                  activeTab === 'home' ? 'text-[#0F4C5C] font-semibold' : 'hover:text-[#0F4C5C]'
+                }`}
+              >
+                Home
+                {activeTab === 'home' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0F4C5C] -mb-1" />}
+              </button>
+            </li>
+
+            {/* Categories Showcase with pure Hover Trigger (:hover / onMouseEnter) */}
+            <li 
+              className="relative"
+              onMouseEnter={() => {
+                if (categoriesMenuTimeoutRef.current) clearTimeout(categoriesMenuTimeoutRef.current);
+                setIsCategoriesMenuOpen(true);
+              }}
+              onMouseLeave={() => {
+                categoriesMenuTimeoutRef.current = setTimeout(() => {
+                  setIsCategoriesMenuOpen(false);
+                }, 200);
+              }}
+            >
+              <button
+                id="nav-link-categories"
+                type="button"
+                onClick={() => {
+                  setActiveTab('categories');
+                  setIsCategoriesMenuOpen(false);
+                }}
+                className={`relative py-1 flex items-center gap-1 transition-all cursor-pointer ${
+                  isCategoriesMenuOpen || activeTab === 'categories' ? 'text-[#0F4C5C] font-semibold' : 'hover:text-[#0F4C5C]'
+                }`}
+              >
+                <span>Categories</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isCategoriesMenuOpen ? 'rotate-180 text-[#0F4C5C]' : ''}`} />
+                {activeTab === 'categories' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0F4C5C] -mb-1" />}
+              </button>
+            </li>
+
+            {/* Shop Section */}
+            <li>
+              <button
+                id="nav-link-shop-the-look"
+                type="button"
+                onClick={() => setActiveTab('shop-the-look')}
+                className={`relative py-1 transition-all cursor-pointer ${
+                  activeTab === 'shop-the-look' ? 'text-[#0F4C5C] font-semibold' : 'hover:text-[#0F4C5C]'
+                }`}
+              >
+                <span>Shop the Look</span>
+                {activeTab === 'shop-the-look' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0F4C5C] -mb-1" />}
+              </button>
+            </li>
+
+            <li>
+              <button
+                id="nav-link-sarees-rts"
+                type="button"
+                onClick={() => setActiveTab('sarees-rts')}
+                className={`relative py-1 transition-all cursor-pointer ${
+                  activeTab === 'sarees-rts' ? 'text-[#0F4C5C] font-semibold' : 'hover:text-[#0F4C5C]'
+                }`}
+              >
+                <span className="flex items-center gap-1">
+                  <span>Sarees – Ready to Ship</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block" />
+                </span>
+                {activeTab === 'sarees-rts' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0F4C5C] -mb-1" />}
+              </button>
+            </li>
+
+            <li>
+              <button
+                id="nav-link-custom-clothing"
+                type="button"
+                onClick={() => setActiveTab('custom-clothing')}
+                className={`relative py-1 transition-all cursor-pointer ${
+                  activeTab === 'custom' || activeTab === 'custom-clothing' ? 'text-[#0F4C5C] font-semibold' : 'hover:text-[#0F4C5C]'
+                }`}
+              >
+                Customised Clothing
+                {(activeTab === 'custom' || activeTab === 'custom-clothing') && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0F4C5C] -mb-1" />
+                )}
+              </button>
+            </li>
+
+            <li>
+              <button
+                id="nav-link-story"
+                type="button"
+                onClick={() => setActiveTab('story')}
+                className={`relative py-1 transition-all cursor-pointer ${
+                  activeTab === 'story' ? 'text-[#0F4C5C] font-semibold' : 'hover:text-[#0F4C5C]'
+                }`}
+              >
+                The Sixth Element Story
+                {activeTab === 'story' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0F4C5C] -mb-1" />}
+              </button>
+            </li>
+
+            <li>
+              <button
+                id="nav-link-about"
+                type="button"
+                onClick={() => setActiveTab('about')}
+                className={`relative py-1 transition-all cursor-pointer ${
+                  activeTab === 'about' ? 'text-[#0F4C5C] font-semibold' : 'hover:text-[#0F4C5C]'
+                }`}
+              >
+                About AARU
+                {activeTab === 'about' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0F4C5C] -mb-1" />}
+              </button>
+            </li>
+
+            <li>
+              <button
+                id="nav-link-sale"
+                type="button"
+                onClick={() => setActiveTab('sale')}
+                className={`relative py-1 transition-all cursor-pointer text-[#C08081] font-semibold hover:text-[#A66263] ${
+                  activeTab === 'sale' ? 'underline underline-offset-4' : ''
+                }`}
+              >
+                Sale
+                <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-[#C08081] align-top" />
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        {/* Categories Mega Menu Dropdown */}
+        <CategoriesMegaMenu
+          isOpen={isCategoriesMenuOpen}
+          onMouseEnter={() => {
+            if (categoriesMenuTimeoutRef.current) clearTimeout(categoriesMenuTimeoutRef.current);
+            setIsCategoriesMenuOpen(true);
+          }}
+          onMouseLeave={() => {
+            categoriesMenuTimeoutRef.current = setTimeout(() => {
+              setIsCategoriesMenuOpen(false);
+            }, 200);
+          }}
+          onClose={() => {
+            setIsCategoriesMenuOpen(false);
+          }}
+          categories={categories}
+          products={products}
+          onSelectCategory={(catName) => {
+            setIsCategoriesMenuOpen(false);
+            if (onSelectCategory) {
+              onSelectCategory(catName);
+            } else {
+              setActiveTab(catName);
+            }
+          }}
+          onSelectProduct={(prod) => {
+            setIsCategoriesMenuOpen(false);
+            if (onSearchSelect) onSearchSelect(prod);
+          }}
+          onNavigateCustom={() => {
+            setIsCategoriesMenuOpen(false);
+            setActiveTab('custom-clothing');
+          }}
+        />
+      </nav>
+
+      {/* Mobile Push-Down Accordion Menu */}
+      {isMobileMenuOpen && (
+        <div 
+          id="mobile-pushdown-menu"
+          className="lg:hidden w-full bg-[#FAF9F5] border-t border-b border-[#E8DFD5] shadow-xs animate-in slide-in-from-top duration-300 overflow-hidden"
+        >
+          <div className="px-4 py-4 sm:px-6 space-y-4 max-w-2xl mx-auto">
+            {/* Mobile Navigation Brand Header with Image Logo */}
+            <div className="flex flex-col items-center justify-center pb-3 border-b border-[#E8DFD5]/70 text-center">
+              <AaruLogo size="md" layout="centered" />
+            </div>
+
+            {/* Navigation Links with 44px min touch targets */}
+            <nav className="space-y-1 text-xs uppercase tracking-wider font-semibold text-[#24211E]">
+              {/* 1. Home */}
+              <button
+                id="mobile-nav-home"
+                type="button"
+                onClick={() => {
+                  setActiveTab('home');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full min-h-[44px] px-3 py-2.5 text-left flex items-center justify-between border-b border-[#E8DFD5]/60 hover:bg-white transition-colors ${
+                  activeTab === 'home' ? 'text-[#0F4C5C] bg-white font-bold border-l-3 border-[#0F4C5C]' : ''
+                }`}
+              >
+                <span>Home</span>
+                <ArrowRight className="w-4 h-4 text-[#8A8175]" />
+              </button>
+
+              {/* 2. Shop the Look */}
+              <div className="border-b border-[#E8DFD5]/60">
+                <button
+                  id="mobile-nav-shop-the-look"
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('shop-the-look');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full min-h-[44px] px-3 py-2.5 text-left flex items-center justify-between hover:bg-white transition-colors ${
+                    activeTab === 'shop-the-look' ? 'text-[#0F4C5C] bg-white font-bold border-l-3 border-[#0F4C5C]' : ''
+                  }`}
+                >
+                  <span>Shop the Look</span>
+                  <ArrowRight className="w-4 h-4 text-[#8A8175]" />
+                </button>
+              </div>
+
+              {/* 3. Categories Standard Clean List */}
+              <div className="border-b border-[#E8DFD5]/60">
+                <button
+                  id="mobile-nav-categories-toggle"
+                  type="button"
+                  onClick={() => setIsMobileCategoriesOpen(!isMobileCategoriesOpen)}
+                  className="w-full min-h-[44px] px-3 py-2.5 text-left flex items-center justify-between hover:bg-white transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <span>Categories</span>
+                    <span className="text-[10px] font-mono font-normal bg-[#F5EFE6] px-1.5 py-0.5 text-[#8C6D37]">
+                      {categories.length}
+                    </span>
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-[#8A8175] transition-transform duration-200 ${isMobileCategoriesOpen ? 'rotate-180 text-[#0F4C5C]' : ''}`} />
+                </button>
+
+                {isMobileCategoriesOpen && (
+                  <div id="mobile-categories-accordion" className="bg-white/90 border-t border-[#E8DFD5] pl-3 pr-2 py-1 divide-y divide-[#FAF7F2] max-h-72 overflow-y-auto">
+                    {categories.map((cat) => (
+                      <div key={cat.id} className="py-1">
+                        <button
+                          id={`mobile-cat-${cat.slug}`}
+                          type="button"
+                          onClick={() => {
+                            if (cat.name === 'Customized Clothing') {
+                              setActiveTab('custom-clothing');
+                            } else if (onSelectCategory) {
+                              onSelectCategory(cat.name);
+                            } else {
+                              setActiveTab(cat.name);
+                            }
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="w-full min-h-[40px] px-2 py-1 text-left flex items-center justify-between text-[11px] font-medium text-[#4A4339] hover:text-[#0F4C5C] hover:bg-[#FAF7F2] transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <img 
+                              src={cat.image} 
+                              alt={cat.name} 
+                              className="w-6 h-6 object-cover border border-[#E8DFD5] bg-[#FAF7F2]" 
+                            />
+                            <span>{cat.name}</span>
+                          </div>
+                          <span className="text-[10px] text-[#8A8175] font-mono">→</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Sarees – Ready to Ship */}
+              <button
+                id="mobile-nav-sarees-rts"
+                type="button"
+                onClick={() => {
+                  setActiveTab('sarees-rts');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full min-h-[44px] px-3 py-2.5 text-left flex items-center justify-between border-b border-[#E8DFD5]/60 hover:bg-white transition-colors ${
+                  activeTab === 'sarees-rts' ? 'text-[#0F4C5C] bg-white font-bold border-l-3 border-[#0F4C5C]' : ''
+                }`}
+              >
+                <span className="flex items-center gap-1.5">
+                  <span>Sarees – Ready to Ship</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block" />
+                </span>
+                <ArrowRight className="w-4 h-4 text-[#8A8175]" />
+              </button>
+
+              {/* 5. Customised Clothing */}
+              <button
+                id="mobile-nav-custom-clothing"
+                type="button"
+                onClick={() => {
+                  setActiveTab('custom-clothing');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full min-h-[44px] px-3 py-2.5 text-left flex items-center justify-between border-b border-[#E8DFD5]/60 hover:bg-white transition-colors ${
+                  activeTab === 'custom' || activeTab === 'custom-clothing' ? 'text-[#0F4C5C] bg-white font-bold border-l-3 border-[#0F4C5C]' : ''
+                }`}
+              >
+                <span>Customised Clothing</span>
+                <ArrowRight className="w-4 h-4 text-[#8A8175]" />
+              </button>
+
+              {/* 6. The Sixth Element Story */}
+              <button
+                id="mobile-nav-story"
+                type="button"
+                onClick={() => {
+                  setActiveTab('story');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full min-h-[44px] px-3 py-2.5 text-left flex items-center justify-between border-b border-[#E8DFD5]/60 hover:bg-white transition-colors ${
+                  activeTab === 'story' ? 'text-[#0F4C5C] bg-white font-bold border-l-3 border-[#0F4C5C]' : ''
+                }`}
+              >
+                <span>The Sixth Element Story</span>
+                <ArrowRight className="w-4 h-4 text-[#8A8175]" />
+              </button>
+
+              {/* 7. About AARU */}
+              <button
+                id="mobile-nav-about"
+                type="button"
+                onClick={() => {
+                  setActiveTab('about');
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full min-h-[44px] px-3 py-2.5 text-left flex items-center justify-between border-b border-[#E8DFD5]/60 hover:bg-white transition-colors ${
+                  activeTab === 'about' ? 'text-[#0F4C5C] bg-white font-bold border-l-3 border-[#0F4C5C]' : ''
+                }`}
+              >
+                <span>About AARU</span>
+                <ArrowRight className="w-4 h-4 text-[#8A8175]" />
+              </button>
+
+              {/* 8. Orders & Tracking */}
+              <button
+                id="mobile-nav-orders"
+                type="button"
+                onClick={() => {
+                  onOpenOrders();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full min-h-[44px] px-3 py-2.5 text-left flex items-center justify-between border-b border-[#E8DFD5]/60 hover:bg-white transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-[#0F4C5C]" />
+                  <span>Orders & Tracking</span>
+                </span>
+                <ArrowRight className="w-4 h-4 text-[#8A8175]" />
+              </button>
+            </nav>
+
+            {/* Mobile Actions: Admin Dashboard */}
+            {currentUser?.role === 'admin' && (
+              <div className="pt-3 border-t border-[#E8DFD5] space-y-2.5">
+                <button
+                  id="mobile-admin-switch-btn"
+                  type="button"
+                  onClick={() => {
+                    if (onToggleMode) onToggleMode('admin');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full min-h-[44px] px-4 bg-[#9C7C38] text-white hover:bg-[#85672A] text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span>Admin Dashboard</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </header>
+  );
+};
