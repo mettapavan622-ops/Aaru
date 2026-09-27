@@ -320,15 +320,15 @@ A fashion brand built around the belief that clothing can become an extension of
 
 ---
 
-## 👨‍💻 Developer
+## 👨‍💻 Developers
 
-**Shinzou M**
+**Sri Harshini,Metta Pavan**
 
 Computer Science Engineering
 AI & Full-Stack Development
 
+GitHub: [msriharshini64-lgtm](https://github.com/msriharshini64-lgtm)
 GitHub: [mettapavan622-ops](https://github.com/mettapavan622-ops)
-
 ---
 
 ## 📄 License
