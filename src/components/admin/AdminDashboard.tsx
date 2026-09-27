@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Product, Order, AnnouncementSettings, Category, Collection, CustomerInquiry, ReturnExchangeRequest, PromoCode } from '../../types';
 import { ProductEditor } from './ProductEditor';
 import { DatabaseSchemaViewer } from './DatabaseSchemaViewer';
+import { CustomerAccessManagement } from './CustomerAccessManagement';
 import { 
   Package, 
   ShoppingBag, 
@@ -34,7 +35,10 @@ import {
   ToggleLeft,
   ToggleRight,
   Percent,
-  LogOut
+  LogOut,
+  Users,
+  ShieldCheck,
+  Settings
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -52,6 +56,8 @@ interface AdminDashboardProps {
   onSignOut?: () => void;
   onRefreshOrders?: () => Promise<void> | void;
   onRefreshCoupons?: () => Promise<void> | void;
+  initialTab?: string;
+  onNavigateTab?: (tab: string) => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -68,9 +74,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onSwitchToUser,
   onSignOut,
   onRefreshOrders,
-  onRefreshCoupons
+  onRefreshCoupons,
+  initialTab = 'products',
+  onNavigateTab
 }) => {
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'returns' | 'inquiries' | 'coupons' | 'announcement' | 'schema'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'users' | 'settings' | 'returns' | 'inquiries' | 'coupons' | 'announcement' | 'schema'>(() => {
+    if (initialTab === 'dashboard') return 'products';
+    if (initialTab === 'users') return 'users';
+    if (initialTab === 'orders') return 'orders';
+    if (initialTab === 'settings') return 'settings';
+    return (initialTab as any) || 'products';
+  });
+
+  useEffect(() => {
+    if (initialTab) {
+      if (initialTab === 'dashboard') setActiveTab('products');
+      else if (initialTab === 'users') setActiveTab('users');
+      else if (initialTab === 'orders') setActiveTab('orders');
+      else if (initialTab === 'settings') setActiveTab('settings');
+      else setActiveTab(initialTab as any);
+    }
+  }, [initialTab]);
   const [productEditing, setProductEditing] = useState<Product | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [productSearch, setProductSearch] = useState('');
@@ -449,8 +473,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {/* Dashboard Tabs */}
         <div className="flex flex-wrap items-center gap-2 border-b border-[#D4C7B5] pb-2">
           {[
-            { id: 'products', label: 'Catalog & Product Manager', icon: Package },
+            { id: 'products', label: 'Catalog Manager (/admin/products)', icon: Package },
             { id: 'orders', label: `Customer Orders (${orders.length})`, icon: ShoppingBag },
+            { id: 'users', label: 'Customer Access (/admin/users)', icon: Users },
+            { id: 'settings', label: 'Store Settings (/admin/settings)', icon: SlidersHorizontal },
             { 
               id: 'coupons', 
               label: `Privilege Coupons (${couponsList.filter(c => c.isActive).length} Active)`, 
@@ -464,11 +490,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               highlight: returnRequests.some(r => r.status === 'Pending')
             },
             { id: 'inquiries', label: `Customer Inquiries (${inquiries.length})`, icon: MessageSquare },
-            { id: 'announcement', label: 'Sale Banners & Customer Alerts', icon: Megaphone },
             { id: 'schema', label: 'PostgreSQL Database Architecture', icon: Database }
           ].map((tab) => {
             const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
+            const isActive = activeTab === tab.id || (tab.id === 'settings' && activeTab === 'announcement');
             return (
               <button
                 key={tab.id}
@@ -477,6 +502,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   setActiveTab(tab.id as any);
                   setIsCreatingNew(false);
                   setProductEditing(null);
+                  if (onNavigateTab) onNavigateTab(tab.id);
                   if (tab.id === 'coupons') fetchCoupons();
                   if (tab.id === 'inquiries') fetchInquiries();
                   if (tab.id === 'returns') fetchReturnRequests();
@@ -1978,6 +2004,83 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Tab: Customer Access Management (/admin/users) */}
+        {activeTab === 'users' && (
+          <CustomerAccessManagement />
+        )}
+
+        {/* Tab: Store Settings & Alerts (/admin/settings) */}
+        {(activeTab === 'settings' || activeTab === 'announcement') && (
+          <div className="bg-white border border-[#E8DFD5] p-6 shadow-xs space-y-6">
+            <div className="flex items-center gap-2 pb-3 border-b border-[#E8DFD5]">
+              <SlidersHorizontal className="w-5 h-5 text-[#0F4C5C]" />
+              <div>
+                <h3 className="font-serif text-lg font-bold text-[#24211E]">Store Settings & Live Announcement Bar</h3>
+                <p className="text-xs text-[#736B5E]">Configure sitewide luxury banner announcements, sale ribbons, and customer notice messaging.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAnnouncementSubmit} className="space-y-5 max-w-2xl">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#5C5549] mb-1.5">
+                  Sitewide Announcement Message
+                </label>
+                <textarea
+                  rows={3}
+                  value={announcementText}
+                  onChange={(e) => setAnnouncementText(e.target.value)}
+                  placeholder="e.g. Complimentary Express Blue Dart Shipping on all heirloom handloom orders across India."
+                  className="w-full p-3 bg-[#FAF7F2] border border-[#D4C7B5] focus:border-[#0F4C5C] text-xs text-[#24211E] focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-3 bg-[#FAF7F2] border border-[#E8DFD5] flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-[#24211E]">Sale Ribbon Active</p>
+                    <p className="text-[11px] text-[#736B5E]">Highlights promotional event badge</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isSaleActive}
+                    onChange={(e) => setIsSaleActive(e.target.checked)}
+                    className="w-4 h-4 accent-[#0F4C5C] cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#5C5549] mb-1">
+                    Sale Ribbon Badge Text
+                  </label>
+                  <input
+                    type="text"
+                    value={saleHighlight}
+                    onChange={(e) => setSaleHighlight(e.target.value)}
+                    placeholder="e.g. 25% Off Festive Heirloom"
+                    className="w-full p-2.5 bg-[#FAF7F2] border border-[#D4C7B5] focus:border-[#0F4C5C] text-xs text-[#24211E] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {announcementSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-medium flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Store settings & announcement updated and broadcast live to all clients.</span>
+                </div>
+              )}
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-[#0F4C5C] hover:bg-[#0b3844] text-white text-xs font-semibold uppercase tracking-wider shadow-xs transition-colors cursor-pointer"
+                >
+                  Save Store Settings
+                </button>
+              </div>
+            </form>
           </div>
         )}
 

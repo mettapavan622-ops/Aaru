@@ -45,7 +45,17 @@ import { AuthModal } from './components/AuthModal';
 import { AuthScreen } from './components/AuthScreen';
 import { WhatsAppButton } from './components/WhatsAppButton';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { AdminLoginPage } from './components/admin/AdminLoginPage';
 import { PolicyPage, PolicyType } from './components/PolicyPages';
+import { ShieldAlert } from 'lucide-react';
+import { supabase } from './lib/supabase';
+import { mapSupabaseUserToAppUser } from './lib/supabaseAuth';
+
+export const isUserAdmin = (user: User | null): boolean => {
+  if (!user) return false;
+  const roleUpper = (user.role || '').toUpperCase();
+  return roleUpper === 'ADMIN' || user.email?.toLowerCase().trim() === 'aarubymoni@admin.co.in';
+};
 
 export default function App() {
   // Authentication State: Loaded from verified session
@@ -61,79 +71,169 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
 
+  // ---------------------------------------------------------------------------
+  // Application Routing Architecture: User Frontend vs Admin Dashboard Routes
+  // User Routes: /, /shop, /products/:id, /login, /signup, /account, /orders, /cart, /checkout
+  // Admin Routes: /admin/login, /admin/dashboard, /admin/products, /admin/orders, /admin/users, /admin/settings
+  // ---------------------------------------------------------------------------
+  const [currentPath, setCurrentPath] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname.toLowerCase();
+    }
+    return '/';
+  });
+
+  const [adminTab, setAdminTab] = useState<string>('products');
+  const [unauthorizedToast, setUnauthorizedToast] = useState<string | null>(null);
+
   // Top Level Navigation & Presentation Role Switcher
   const [currentDashboard, setCurrentDashboard] = useState<'user' | 'admin'>(() => {
     try {
       const saved = localStorage.getItem('aaru_user_session');
       if (saved) {
         const u = JSON.parse(saved);
-        if (u && (u.role === 'admin' || u.email?.toLowerCase() === 'aarubymoni@admin.co.in')) {
-          return 'admin';
+        if (isUserAdmin(u)) {
+          const path = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '';
+          if (path.startsWith('/admin') && path !== '/admin/login') {
+            return 'admin';
+          }
         }
       }
     } catch {}
     return 'user';
   });
+
   const [activeUserView, setActiveUserView] = useState<
     'home' | 'catalog' | 'pdp' | 'custom' | 'story' | 'about' | 'contact' | 'shop-the-look' | 'returns-policy' | 'shipping-policy' | 'privacy-policy' | 'terms-of-use'
-  >(() => {
-    if (typeof window !== 'undefined') {
-      const path = window.location.pathname.toLowerCase();
-      if (path.includes('returns-policy')) return 'returns-policy';
-      if (path.includes('shipping-policy')) return 'shipping-policy';
-      if (path.includes('privacy-policy')) return 'privacy-policy';
-      if (path.includes('terms-of-use')) return 'terms-of-use';
-    }
-    return 'home';
-  });
+  >('home');
 
-  // Sync browser back/forward history with policy views and admin route protection
+  // Unified Route Dispatcher & Security Evaluator
+  const evaluateRoute = (pathname: string, user: User | null) => {
+    const path = pathname.toLowerCase();
+    const isAdmin = isUserAdmin(user);
+
+    // =========================================================================
+    // ADMIN ROUTES
+    // =========================================================================
+    if (path === '/admin/login') {
+      if (isAdmin) {
+        // Already authenticated as admin: redirect to dashboard
+        try { window.history.replaceState(null, '', '/admin/dashboard'); } catch {}
+        setCurrentPath('/admin/dashboard');
+        setCurrentDashboard('admin');
+        setAdminTab('products');
+      } else {
+        setCurrentPath('/admin/login');
+      }
+      return;
+    }
+
+    if (path.startsWith('/admin')) {
+      if (isAdmin) {
+        setCurrentDashboard('admin');
+        if (path === '/admin/products') setAdminTab('products');
+        else if (path === '/admin/orders') setAdminTab('orders');
+        else if (path === '/admin/users') setAdminTab('users');
+        else if (path === '/admin/settings') setAdminTab('settings');
+        else setAdminTab('products');
+      } else {
+        // Critical Security: Normal user or guest manually navigates to /admin/*
+        // Must NOT render dashboard! Immediately redirect.
+        if (!user) {
+          try { window.history.replaceState(null, '', '/admin/login'); } catch {}
+          setCurrentPath('/admin/login');
+        } else {
+          try { window.history.replaceState(null, '', '/'); } catch {}
+          setCurrentPath('/');
+          setCurrentDashboard('user');
+          setActiveUserView('home');
+          setUnauthorizedToast('Access Denied: Administrator privileges required to access atelier management routes.');
+        }
+      }
+      return;
+    }
+
+    // =========================================================================
+    // USER FRONTEND ROUTES
+    // =========================================================================
+    setCurrentDashboard('user');
+
+    if (path === '/shop') {
+      setActiveUserView('catalog');
+    } else if (path.startsWith('/products/')) {
+      const prodId = path.replace('/products/', '').trim();
+      if (prodId) {
+        const found = products.find(p => p.id === prodId || p.slug === prodId);
+        if (found) {
+          setSelectedProduct(found);
+          setActiveUserView('pdp');
+        }
+      }
+    } else if (path === '/login') {
+      setAuthModalMode('login');
+      setIsAuthModalOpen(true);
+    } else if (path === '/signup') {
+      setAuthModalMode('signup');
+      setIsAuthModalOpen(true);
+    } else if (path === '/account') {
+      if (user) setIsOrdersOpen(true);
+      else { setAuthModalMode('login'); setIsAuthModalOpen(true); }
+    } else if (path === '/orders') {
+      setIsOrdersOpen(true);
+    } else if (path === '/cart') {
+      setIsCartOpen(true);
+    } else if (path === '/checkout') {
+      setIsCheckoutOpen(true);
+    } else if (path === '/returns-policy') {
+      setActiveUserView('returns-policy');
+    } else if (path === '/shipping-policy') {
+      setActiveUserView('shipping-policy');
+    } else if (path === '/privacy-policy') {
+      setActiveUserView('privacy-policy');
+    } else if (path === '/terms-of-use') {
+      setActiveUserView('terms-of-use');
+    } else {
+      setActiveUserView('home');
+    }
+  };
+
+  // Synchronize browser history and popstate navigation
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname.toLowerCase();
-      if (path === '/admin') {
-        if (currentUser && currentUser.role === 'admin') {
-          setCurrentDashboard('admin');
-        } else {
-          setCurrentDashboard('user');
-          setActiveUserView('home');
-          window.history.replaceState(null, '', '/');
-        }
-      } else if (path.includes('returns-policy')) setActiveUserView('returns-policy');
-      else if (path.includes('shipping-policy')) setActiveUserView('shipping-policy');
-      else if (path.includes('privacy-policy')) setActiveUserView('privacy-policy');
-      else if (path.includes('terms-of-use')) setActiveUserView('terms-of-use');
-      else if (path === '/' || path === '') setActiveUserView('home');
+      setCurrentPath(path);
+      evaluateRoute(path, currentUser);
     };
 
     window.addEventListener('popstate', handlePopState);
-
-    // Initial check on mount for direct /admin URL typing
-    if (typeof window !== 'undefined' && window.location.pathname.toLowerCase() === '/admin') {
-      if (currentUser && currentUser.role === 'admin') {
-        setCurrentDashboard('admin');
-      } else {
-        setCurrentDashboard('user');
-        setActiveUserView('home');
-        window.history.replaceState(null, '', '/');
-      }
-    }
+    // Initial evaluation on mount
+    evaluateRoute(window.location.pathname.toLowerCase(), currentUser);
 
     return () => window.removeEventListener('popstate', handlePopState);
   }, [currentUser]);
 
+  // Clean Navigation Handler
+  const navigateToPath = (targetPath: string) => {
+    try {
+      window.history.pushState(null, '', targetPath);
+    } catch {}
+    const cleanPath = targetPath.toLowerCase();
+    setCurrentPath(cleanPath);
+    evaluateRoute(cleanPath, currentUser);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const navigateToView = (view: typeof activeUserView) => {
     setActiveUserView(view);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    try {
-      if (view === 'returns-policy') window.history.pushState(null, '', '/returns-policy');
-      else if (view === 'shipping-policy') window.history.pushState(null, '', '/shipping-policy');
-      else if (view === 'privacy-policy') window.history.pushState(null, '', '/privacy-policy');
-      else if (view === 'terms-of-use') window.history.pushState(null, '', '/terms-of-use');
-      else if (view === 'home') window.history.pushState(null, '', '/');
-    } catch {
-      // Safe fallback if history API restricted in iframe
-    }
+    const viewMap: Record<string, string> = {
+      'returns-policy': '/returns-policy',
+      'shipping-policy': '/shipping-policy',
+      'privacy-policy': '/privacy-policy',
+      'terms-of-use': '/terms-of-use',
+      'catalog': '/shop',
+      'home': '/'
+    };
+    navigateToPath(viewMap[view] || '/');
   };
   const [catalogCategory, setCatalogCategory] = useState<string>('all');
   const [catalogFilter, setCatalogFilter] = useState<'all' | 'ready-to-ship' | 'handloom' | 'bridal'>('all');
@@ -207,9 +307,13 @@ export default function App() {
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {}
     localStorage.removeItem('aaru_user_session');
     localStorage.removeItem('aaru_auth_token');
+    localStorage.removeItem('aaru_supabase_token');
     setCurrentUser(null);
     setCartItems([]);
     setWishlistProductIds([]);
@@ -221,6 +325,34 @@ export default function App() {
     setIsGuestBrowsing(false);
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   };
+
+  // Listen to Supabase Auth State Changes in real-time
+  useEffect(() => {
+    try {
+      const { data: authSubscription } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          const appUser = mapSupabaseUserToAppUser(session.user);
+          setCurrentUser(appUser);
+          localStorage.setItem('aaru_user_session', JSON.stringify(appUser));
+          if (session.access_token) {
+            localStorage.setItem('aaru_auth_token', session.access_token);
+            localStorage.setItem('aaru_supabase_token', session.access_token);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setCurrentUser(null);
+          localStorage.removeItem('aaru_user_session');
+          localStorage.removeItem('aaru_auth_token');
+          localStorage.removeItem('aaru_supabase_token');
+        }
+      });
+
+      return () => {
+        authSubscription?.subscription?.unsubscribe();
+      };
+    } catch (err) {
+      console.warn('Supabase auth state listener not active:', err);
+    }
+  }, []);
 
   // Synchronize with backend API on mount
   useEffect(() => {
@@ -669,16 +801,44 @@ export default function App() {
   const wishlistProducts = (products || []).filter(p => p && (wishlistProductIds || []).includes(p.id));
 
   // =========================================================================
+  // DEDICATED ADMIN LOGIN ROUTE (/admin/login)
+  // =========================================================================
+  if (currentPath === '/admin/login') {
+    if (isUserAdmin(currentUser)) {
+      navigateToPath('/admin/dashboard');
+      return null;
+    }
+
+    return (
+      <AdminLoginPage
+        onLoginSuccess={(adminUser) => {
+          setCurrentUser(adminUser);
+          setCurrentDashboard('admin');
+          setAdminTab('products');
+          navigateToPath('/admin/dashboard');
+        }}
+        onReturnToStore={() => {
+          navigateToPath('/');
+        }}
+      />
+    );
+  }
+
+  // =========================================================================
   // ROUTE PROTECTION & ADMIN DASHBOARD:
-  // Strictly enforce that only authenticated users with role === 'admin'
+  // Strictly enforce that only authenticated users with role === 'ADMIN'
   // can view the Admin Dashboard. Standard customers and unauthenticated users
-  // are immediately redirected to the Customer Storefront.
+  // are immediately prevented from viewing the dashboard and redirected.
   // =========================================================================
   if (currentDashboard === 'admin') {
-    if (!currentUser || currentUser.role !== 'admin') {
+    if (!isUserAdmin(currentUser)) {
       // Route Protection: prevent unauthorized access
-      setCurrentDashboard('user');
-      setActiveUserView('home');
+      if (!currentUser) {
+        navigateToPath('/admin/login');
+      } else {
+        navigateToPath('/');
+        setUnauthorizedToast('Access Denied: Administrator privileges required to access atelier management routes.');
+      }
       return null;
     }
 
@@ -695,9 +855,27 @@ export default function App() {
         onDeleteProduct={handleAdminDeleteProduct}
         onUpdateAnnouncement={handleAdminUpdateAnnouncement}
         onUpdateOrderStatus={handleAdminUpdateOrderStatus}
-        onSwitchToUser={() => setCurrentDashboard('user')}
-        onSignOut={handleSignOut}
+        onSwitchToUser={() => {
+          navigateToPath('/');
+        }}
+        onSignOut={() => {
+          handleSignOut();
+          navigateToPath('/admin/login');
+        }}
         onRefreshOrders={handleRefreshOrders}
+        initialTab={adminTab}
+        onNavigateTab={(tab) => {
+          const tabMap: Record<string, string> = {
+            products: '/admin/products',
+            orders: '/admin/orders',
+            users: '/admin/users',
+            settings: '/admin/settings',
+            announcement: '/admin/settings'
+          };
+          const newPath = tabMap[tab] || `/admin/${tab}`;
+          navigateToPath(newPath);
+          setAdminTab(tab);
+        }}
       />
     );
   }

@@ -267,15 +267,23 @@ export interface CustomerInquiry {
   createdAt: string;
 }
 
+export type UserRole = 'USER' | 'ADMIN' | 'customer' | 'admin';
+export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'REVOKED';
+
 export interface User {
   id: string;
   email: string;
   name: string;
   phone: string;
-  role: 'customer' | 'admin';
+  role: UserRole;
+  status?: AccountStatus;
   addresses?: Address[];
   password?: string;
   picture?: string;
+  createdAt?: string;
+  lastLoginAt?: string;
+  ordersCount?: number;
+  totalSpend?: number;
 }
 
 export interface LookHotspot {
