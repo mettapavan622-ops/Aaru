@@ -68,6 +68,7 @@ export default function App() {
     }
   });
   const [isGuestBrowsing, setIsGuestBrowsing] = useState<boolean>(false);
+  const [isAuthResolved, setIsAuthResolved] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
 
@@ -290,7 +291,7 @@ export default function App() {
     setPromoDiscount(0);
 
     // Strict Role-Based Redirection:
-    if (user.role === 'admin' || user.email?.toLowerCase() === 'aarubymoni@admin.co.in') {
+    if (isUserAdmin(user)) {
       setCurrentDashboard('admin');
       const token = localStorage.getItem('aaru_auth_token');
       fetch('/api/orders', {
@@ -326,32 +327,90 @@ export default function App() {
     fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   };
 
-  // Listen to Supabase Auth State Changes in real-time
+  // Listen to Supabase Auth State Changes and restore the persistent session
+  // on every page load. This prevents the old in-memory user cache from deciding
+  // whether a customer is still authenticated after a Render restart.
   useEffect(() => {
-    try {
-      const { data: authSubscription } = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const appUser = mapSupabaseUserToAppUser(session.user);
-          setCurrentUser(appUser);
-          localStorage.setItem('aaru_user_session', JSON.stringify(appUser));
-          if (session.access_token) {
-            localStorage.setItem('aaru_auth_token', session.access_token);
-            localStorage.setItem('aaru_supabase_token', session.access_token);
-          }
-        } else if (event === 'SIGNED_OUT') {
+    let mounted = true;
+
+    const hydrateSupabaseSession = async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (error || !data.session?.user) {
           setCurrentUser(null);
           localStorage.removeItem('aaru_user_session');
           localStorage.removeItem('aaru_auth_token');
           localStorage.removeItem('aaru_supabase_token');
+          return;
         }
-      });
 
-      return () => {
-        authSubscription?.subscription?.unsubscribe();
-      };
-    } catch (err) {
-      console.warn('Supabase auth state listener not active:', err);
-    }
+        const session = data.session;
+        const syncResponse = await fetch('/api/auth/sync', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`
+          }
+        });
+        const synced = await syncResponse.json().catch(() => ({}));
+
+        if (!mounted || !syncResponse.ok || !synced.success) {
+          if (mounted) {
+            setCurrentUser(null);
+            localStorage.removeItem('aaru_user_session');
+            localStorage.removeItem('aaru_auth_token');
+            localStorage.removeItem('aaru_supabase_token');
+          }
+          return;
+        }
+
+        const appUser = mapSupabaseUserToAppUser(session.user, {
+          name: synced.user?.name,
+          phone: synced.user?.phone,
+          role: synced.user?.role,
+          status: synced.user?.status
+        });
+
+        setCurrentUser(appUser);
+        localStorage.setItem('aaru_user_session', JSON.stringify(appUser));
+        localStorage.setItem('aaru_auth_token', session.access_token);
+        localStorage.setItem('aaru_supabase_token', session.access_token);
+
+        if (Array.isArray(synced.cart)) setCartItems(synced.cart);
+        if (Array.isArray(synced.wishlist)) setWishlistProductIds(synced.wishlist);
+        if (Array.isArray(synced.orders)) setOrders(synced.orders);
+      } catch (err) {
+        console.warn('Supabase session hydration failed:', err);
+      } finally {
+        if (mounted) setIsAuthResolved(true);
+      }
+    };
+
+    hydrateSupabaseSession();
+
+    const { data: authSubscription } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        // The initial hydration performs the server sync; this listener keeps
+        // refreshed access tokens in localStorage for API requests.
+        const appUser = mapSupabaseUserToAppUser(session.user);
+        setCurrentUser(prev => prev || appUser);
+        if (session.access_token) {
+          localStorage.setItem('aaru_auth_token', session.access_token);
+          localStorage.setItem('aaru_supabase_token', session.access_token);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+        localStorage.removeItem('aaru_user_session');
+        localStorage.removeItem('aaru_auth_token');
+        localStorage.removeItem('aaru_supabase_token');
+      }
+    });
+
+    return () => {
+      mounted = false;
+      authSubscription?.subscription?.unsubscribe();
+    };
   }, []);
 
   // Synchronize with backend API on mount
@@ -391,7 +450,7 @@ export default function App() {
           }
         })
         .catch(err => console.error('Failed to hydrate user data:', err));
-    } else if (currentUser && (currentUser.role === 'admin' || currentUser.email?.toLowerCase() === 'aarubymoni@admin.co.in')) {
+    } else if (currentUser && isUserAdmin(currentUser)) {
       fetch('/api/orders', {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       })
@@ -877,6 +936,17 @@ export default function App() {
           setAdminTab(tab);
         }}
       />
+    );
+  }
+
+  // Wait for Supabase to resolve the persistent session before showing the
+  // storefront. This avoids briefly trusting a stale localStorage user after
+  // an expired or revoked session.
+  if (!isAuthResolved) {
+    return (
+      <div className="min-h-screen bg-[#FAF9F5] flex items-center justify-center text-[#0F4C5C]">
+        <div className="text-xs uppercase tracking-[0.25em] font-semibold">Loading AARU Atelier…</div>
+      </div>
     );
   }
 

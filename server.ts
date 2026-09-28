@@ -10,6 +10,7 @@ import fs from 'fs';
 import multer from 'multer';
 import Razorpay from 'razorpay';
 import bcrypt from 'bcryptjs';
+import { createClient, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 import { createServer as createViteServer } from 'vite';
 import { INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_ANNOUNCEMENT, CATEGORIES, COLLECTIONS, INITIAL_COUPONS, LOOKBOOK_ITEMS } from './src/data/mockData';
 import { Product, Order, CustomClothingRequest, AnnouncementSettings, CustomerInquiry, ReturnExchangeRequest, PromoCode, ReturnTrackingStepStatus } from './src/types';
@@ -17,6 +18,39 @@ import { Product, Order, CustomClothingRequest, AnnouncementSettings, CustomerIn
 // Razorpay Payment Gateway Configuration
 const RAZORPAY_KEY_ID = (process.env.RAZORPAY_KEY_ID || '').trim();
 const RAZORPAY_KEY_SECRET = (process.env.RAZORPAY_KEY_SECRET || '').trim();
+
+// -----------------------------------------------------------------------------
+// Persistent authentication is handled by Supabase Auth. The application
+// profile (name, phone, role, status, cart and wishlist) lives in the Supabase
+// `profiles` table. The old in-memory usersDatabase is kept only as a legacy
+// compatibility cache for existing demo/admin data; it is NOT the source of
+// truth for customer credentials.
+// -----------------------------------------------------------------------------
+const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim();
+const SUPABASE_ANON_KEY = (process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || '').trim();
+const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+
+const supabaseAuthClient: SupabaseClient | null =
+  SUPABASE_URL && SUPABASE_ANON_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false }
+      })
+    : null;
+
+const supabaseAdminClient: SupabaseClient | null =
+  SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false }
+      })
+    : null;
+
+function getSupabaseUserClient(accessToken: string): SupabaseClient | null {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !accessToken) return null;
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+}
 
 // -----------------------------------------------------------------------------
 // Session Token Signing (HMAC-SHA256)
@@ -318,7 +352,7 @@ export const usersDatabase: Map<string, DbUser> = new Map([
   ]
 ]);
 
-// Helper to extract session token from Authorization header, custom header, or cookie
+// Helper to extract an authentication token from the Authorization header or legacy cookie.
 export function extractSessionToken(req: Request): string | null {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -336,81 +370,167 @@ export function extractSessionToken(req: Request): string | null {
   return null;
 }
 
-// Authenticate and return DB user record from request
-export function getAuthenticatedUserFromRequest(req: Request): DbUser | null {
-  const token = extractSessionToken(req);
-  if (!token) return null;
+function profileToDbUser(profile: any, authUser: SupabaseUser): DbUser {
+  const email = (profile?.email || authUser.email || '').toLowerCase().trim();
+  const fallbackName =
+    authUser.user_metadata?.name ||
+    authUser.user_metadata?.display_name ||
+    email.split('@')[0] ||
+    'Store Patron';
 
-  const payload = verifySessionToken(token);
-  if (!payload || !payload.email) return null;
+  const roleUpper = String(profile?.role || authUser.app_metadata?.role || 'USER').toUpperCase();
+  const role: UserRole = roleUpper === 'ADMIN' ? 'ADMIN' : 'USER';
+  const statusValue = String(profile?.status || 'ACTIVE').toUpperCase();
+  const status: AccountStatus = ['ACTIVE', 'SUSPENDED', 'REVOKED'].includes(statusValue)
+    ? (statusValue as AccountStatus)
+    : 'ACTIVE';
 
-  const user = usersDatabase.get(payload.email.toLowerCase().trim());
-  if (!user) return null;
-
-  // Verify account is not suspended or revoked
-  if (user.status === 'REVOKED' || user.status === 'SUSPENDED') {
-    return null;
-  }
-  // Defense in depth: the role embedded in the token must still match the
-  // current role on record (in case an admin later demotes the user).
-  return user;
+  return {
+    id: authUser.id,
+    email,
+    phone: profile?.phone || authUser.user_metadata?.phone || authUser.phone || '',
+    name: profile?.name || fallbackName,
+    role,
+    status,
+    createdAt: profile?.created_at || authUser.created_at || new Date().toISOString(),
+    lastLoginAt: profile?.last_login_at || undefined,
+    cart: Array.isArray(profile?.cart) ? profile.cart : [],
+    wishlist: Array.isArray(profile?.wishlist) ? profile.wishlist : []
+  };
 }
 
 /**
- * Strict Backend Authentication & Authorization Middleware
- * Independently verifies:
- * 1. The user is authenticated (token present and valid).
- * 2. The JWT/session is valid and not tampered with.
- * 3. The user exists in the database.
- * 4. The user's role is exactly ADMIN (or case-insensitive 'admin').
- * 5. The user's account is ACTIVE (not SUSPENDED or REVOKED).
- *
- * If a normal USER attempts to access any /api/admin/* endpoint,
- * the backend MUST return an HTTP 403 Forbidden response.
- * If unauthenticated, returns HTTP 401 Unauthorized response.
+ * Validate a Supabase access token and hydrate the local compatibility cache
+ * from the persistent `profiles` table. This is intentionally async because
+ * Supabase is the authoritative authentication service.
  */
-export function requireAdminAuth(req: Request, res: Response, next: express.NextFunction) {
+export async function getAuthenticatedUserFromRequest(req: Request): Promise<DbUser | null> {
   const token = extractSessionToken(req);
-  if (!token) {
-    return res.status(401).json({ 
-      error: 'Authentication required. Please sign in with administrator credentials.' 
-    });
+  if (!token) return null;
+
+  // Legacy AARU HMAC session token (kept for the existing admin/demo flow).
+  if (token.startsWith('aaru_jwt_')) {
+    const payload = verifySessionToken(token);
+    if (!payload?.email) return null;
+    const user = usersDatabase.get(payload.email.toLowerCase().trim());
+    if (!user || user.status === 'REVOKED' || user.status === 'SUSPENDED') return null;
+    return user;
   }
 
-  // Verify signature, expiry, and decode payload
-  const payload = verifySessionToken(token);
+  // New persistent auth path: Supabase access token.
+  if (!supabaseAuthClient) return null;
 
-  if (!payload || !payload.email) {
-    return res.status(401).json({ 
-      error: 'Invalid or expired session token.' 
-    });
+  try {
+    const { data, error } = await supabaseAuthClient.auth.getUser(token);
+    if (error || !data.user || !data.user.email) return null;
+
+    const authUser = data.user;
+    let profile: any = null;
+
+    // Service-role client is used by the server so profile access does not
+    // depend on the browser and survives Render restarts.
+    if (supabaseAdminClient) {
+      const { data: profileData, error: profileError } = await supabaseAdminClient
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .maybeSingle();
+      if (!profileError) profile = profileData;
+    } else {
+      // Development fallback: query as the authenticated Supabase user.
+      const userClient = getSupabaseUserClient(token);
+      if (userClient) {
+        const { data: profileData, error: profileError } = await userClient
+          .from('profiles')
+          .select('*')
+          .eq('id', authUser.id)
+          .maybeSingle();
+        if (!profileError) profile = profileData;
+      }
+    }
+
+    // The trigger normally creates this row. If an existing Supabase user was
+    // created before the migration, create it on first authenticated request.
+    if (!profile && supabaseAdminClient) {
+      const fallbackName =
+        authUser.user_metadata?.name ||
+        authUser.user_metadata?.display_name ||
+        authUser.email.split('@')[0] ||
+        'Store Patron';
+      const { data: createdProfile } = await supabaseAdminClient
+        .from('profiles')
+        .upsert({
+          id: authUser.id,
+          email: authUser.email.toLowerCase().trim(),
+          name: fallbackName,
+          phone: authUser.user_metadata?.phone || '',
+          role: authUser.email.toLowerCase().trim() === 'aarubymoni@admin.co.in' ? 'ADMIN' : 'USER',
+          status: 'ACTIVE'
+        }, { onConflict: 'id' })
+        .select('*')
+        .single();
+      profile = createdProfile || null;
+    }
+
+    // Root administrator remains compatible with the existing admin account.
+    if (!profile && authUser.email.toLowerCase().trim() === 'aarubymoni@admin.co.in') {
+      profile = {
+        id: authUser.id,
+        email: authUser.email,
+        name: 'Atelier Director Moni',
+        phone: authUser.phone || '',
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        cart: [],
+        wishlist: [],
+        created_at: authUser.created_at
+      };
+    }
+
+    const user = profileToDbUser(profile, authUser);
+    if (user.status === 'REVOKED' || user.status === 'SUSPENDED') return null;
+
+    // Cache only non-secret profile data for the current process. Passwords are
+    // never copied from Supabase Auth into this map.
+    usersDatabase.set(user.email, user);
+    return user;
+  } catch (error) {
+    console.warn('[Supabase Auth] Token validation failed:', error);
+    return null;
   }
+}
 
-  // Look up user in database
-  const user = usersDatabase.get(payload.email.toLowerCase().trim());
-  if (!user) {
-    return res.status(401).json({ 
-      error: 'Administrator record does not exist in database.' 
-    });
+/**
+ * Strict backend admin gateway. Supports both the new Supabase token and the
+ * legacy HMAC token so existing administrator sessions do not break during the
+ * migration.
+ */
+export async function requireAdminAuth(req: Request, res: Response, next: express.NextFunction) {
+  try {
+    const user = await getAuthenticatedUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({
+        error: 'Authentication required. Please sign in with administrator credentials.'
+      });
+    }
+
+    if (String(user.role).toUpperCase() !== 'ADMIN') {
+      return res.status(403).json({
+        error: 'Forbidden: Administrator privileges required to access this endpoint.'
+      });
+    }
+
+    if (user.status === 'REVOKED' || user.status === 'SUSPENDED') {
+      return res.status(403).json({
+        error: 'Account access has been revoked or suspended. Please contact system administrator.'
+      });
+    }
+
+    (req as any).adminUser = user;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired authentication session.' });
   }
-
-  // Check account status
-  if (user.status === 'REVOKED' || user.status === 'SUSPENDED') {
-    return res.status(403).json({ 
-      error: 'Account access has been revoked or suspended. Please contact system administrator.' 
-    });
-  }
-
-  // Verify role is strictly ADMIN
-  const roleUpper = (user.role || '').toUpperCase();
-  if (roleUpper !== 'ADMIN') {
-    return res.status(403).json({ 
-      error: 'Forbidden: Administrator privileges required to access this endpoint.' 
-    });
-  }
-
-  (req as any).adminUser = user;
-  next();
 }
 
 // Get order history scoped to the user
@@ -672,7 +792,7 @@ const otpStore: Record<string, { code: string; expiresAt: number }> = {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT || 3000);
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -689,7 +809,7 @@ async function startServer() {
     res.json({
       status: 'ok',
       service: 'AARU Luxury E-Commerce Engine',
-      database: 'PostgreSQL Relational Adapter',
+      database: 'Supabase Auth + PostgreSQL profiles',
       version: '1.0.0',
       timestamp: new Date().toISOString()
     });
@@ -1219,12 +1339,12 @@ async function startServer() {
   });
 
   // Orders: List (scoped to authenticated patron; admins receive all store orders; guests get empty list)
-  app.get('/api/orders', (req: Request, res: Response) => {
-    const user = getAuthenticatedUserFromRequest(req);
+  app.get('/api/orders', async (req: Request, res: Response) => {
+    const user = await getAuthenticatedUserFromRequest(req);
     if (!user) {
       return res.json([]);
     }
-    if (user.role === 'admin') {
+    if (String(user.role).toUpperCase() === 'ADMIN') {
       return res.json(orders);
     }
     return res.json(getUserOrders(user));
@@ -1318,7 +1438,7 @@ async function startServer() {
   });
 
   // Razorpay: Verify Payment Signature (Backend Step 3)
-  app.post('/api/verify-payment', (req: Request, res: Response) => {
+  app.post('/api/verify-payment', async (req: Request, res: Response) => {
     try {
       const { 
         razorpay_order_id, 
@@ -1395,7 +1515,7 @@ async function startServer() {
       // If checkout order payload was sent alongside verification, register confirmed order in database
       let recordedOrder: Order | null = null;
       if (items && Array.isArray(items) && items.length > 0) {
-        const authUser = getAuthenticatedUserFromRequest(req);
+        const authUser = await getAuthenticatedUserFromRequest(req);
         const emailToCheck = customerEmail || shippingAddress?.email;
         const matchedDbUser = authUser || (emailToCheck ? usersDatabase.get(emailToCheck.toLowerCase().trim()) : null);
         const resolvedUserId = matchedDbUser ? matchedDbUser.id : (authUser ? authUser.id : `usr-guest-${Date.now()}`);
@@ -1467,7 +1587,7 @@ async function startServer() {
   });
 
   // Orders: Create & Payment Verification (Server-Side)
-  app.post('/api/orders', (req: Request, res: Response) => {
+  app.post('/api/orders', async (req: Request, res: Response) => {
     try {
       const { items, shippingAddress, paymentId, paymentMethod, subtotal, discount, shippingFee, tax, total, customerName, customerEmail, customerPhone } = req.body;
 
@@ -1476,7 +1596,7 @@ async function startServer() {
         return res.status(409).json({ error: 'Order already processed for this transaction ID. Duplicate prevented.' });
       }
 
-      const authUser = getAuthenticatedUserFromRequest(req);
+      const authUser = await getAuthenticatedUserFromRequest(req);
       const emailToCheck = customerEmail || shippingAddress?.email;
       const matchedDbUser = authUser || (emailToCheck ? usersDatabase.get(emailToCheck.toLowerCase().trim()) : null);
       const resolvedUserId = matchedDbUser ? matchedDbUser.id : (authUser ? authUser.id : `usr-guest-${Date.now()}`);
@@ -2079,7 +2199,7 @@ async function startServer() {
   // ===========================================================================
 
   // Option A (Manual Password Sign Up Handler)
-  const handleManualSignUpRoute = (req: Request, res: Response) => {
+  const handleManualSignUpRoute = async (req: Request, res: Response) => {
     try {
       const { name, displayName, username, phone, email, password, confirmPassword } = req.body;
 
@@ -2119,6 +2239,41 @@ async function startServer() {
 
       if (password !== confirmPassword) {
         return res.status(400).json({ error: 'Passwords do not match. Please re-enter both passwords.' });
+      }
+
+      // Persistent signup path for legacy clients: create the credential in
+      // Supabase Auth instead of the old in-memory usersDatabase.
+      if (supabaseAdminClient) {
+        const { data: created, error: authError } = await supabaseAdminClient.auth.admin.createUser({
+          email: cleanEmail,
+          password,
+          email_confirm: true,
+          user_metadata: {
+            name: cleanDisplayName,
+            display_name: cleanDisplayName,
+            phone: cleanPhone || ''
+          },
+          app_metadata: { role: 'USER' }
+        });
+        if (authError || !created.user) {
+          return res.status(400).json({ error: authError?.message || 'Failed to create account.' });
+        }
+
+        const { data: profile, error: profileError } = await supabaseAdminClient
+          .from('profiles')
+          .upsert({
+            id: created.user.id, email: cleanEmail, name: cleanDisplayName,
+            phone: cleanPhone || '', role: 'USER', status: 'ACTIVE'
+          }, { onConflict: 'id' })
+          .select('*').single();
+        if (profileError) return res.status(500).json({ error: 'Account created but profile setup failed.' });
+
+        return res.status(201).json({
+          success: true, isNewUser: true,
+          message: `Welcome to AARU Atelier, ${profile.name}! Your account has been created.`,
+          user: { id: profile.id, email: profile.email, name: profile.name, phone: profile.phone || '', role: 'USER', status: 'ACTIVE' },
+          cart: [], wishlist: [], orders: []
+        });
       }
 
       if (usersDatabase.has(cleanEmail)) {
@@ -2193,10 +2348,71 @@ async function startServer() {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // Supabase session synchronization. Customer credentials are stored by
+  // Supabase Auth; this endpoint only hydrates AARU's persistent profile data.
+  // ---------------------------------------------------------------------------
+  app.post('/api/auth/sync', async (req: Request, res: Response) => {
+    try {
+      const user = await getAuthenticatedUserFromRequest(req);
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid or expired authentication session.' });
+      }
+
+      if (supabaseAdminClient) {
+        const now = new Date().toISOString();
+        const { data: updatedProfile, error } = await supabaseAdminClient
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            phone: user.phone || '',
+            role: String(user.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER',
+            status: user.status || 'ACTIVE',
+            last_login_at: now
+          }, { onConflict: 'id' })
+          .select('*')
+          .single();
+
+        if (!error && updatedProfile) {
+          user.name = updatedProfile.name || user.name;
+          user.phone = updatedProfile.phone || user.phone || '';
+          user.role = String(updatedProfile.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
+          user.status = updatedProfile.status || 'ACTIVE';
+          user.cart = Array.isArray(updatedProfile.cart) ? updatedProfile.cart : [];
+          user.wishlist = Array.isArray(updatedProfile.wishlist) ? updatedProfile.wishlist : [];
+          user.lastLoginAt = updatedProfile.last_login_at || now;
+          usersDatabase.set(user.email, user);
+        }
+      }
+
+      return res.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          phone: user.phone || '',
+          role: String(user.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER',
+          status: user.status,
+          createdAt: user.createdAt,
+          lastLoginAt: user.lastLoginAt
+        },
+        cart: user.cart || [],
+        wishlist: user.wishlist || [],
+        orders: getUserOrders(user)
+      });
+    } catch (err: any) {
+      console.error('[Auth Sync] Failed:', err);
+      return res.status(500).json({ error: 'Unable to synchronize your AARU account.' });
+    }
+  });
+
   // ===========================================================================
   // Requirement 2: Sign In Flow (Email Address & Password) with Sanitization
   // ===========================================================================
-  const handleLoginRoute = (req: Request, res: Response) => {
+  const handleLoginRoute = async (req: Request, res: Response) => {
     try {
       const { email, username, password } = req.body;
       const rawIdentifier = email || username;
@@ -2220,7 +2436,36 @@ async function startServer() {
         return res.status(400).json({ error: 'Incorrect email or password. Please verify your credentials.' });
       }
 
-      // 4. Retrieve user record
+      // 4. Persistent Supabase authentication path. The password is verified
+      // by Supabase Auth; it is never read from the AARU process memory.
+      if (supabaseAuthClient) {
+        const { data: authData, error: authError } = await supabaseAuthClient.auth.signInWithPassword({
+          email: cleanEmail, password
+        });
+        if (!authError && authData.user) {
+          const accessToken = authData.session?.access_token;
+          const user = await getAuthenticatedUserFromRequest({
+            headers: { authorization: accessToken ? `Bearer ${accessToken}` : '' } as any,
+            socket: req.socket
+          } as Request);
+
+          if (user) {
+            if (supabaseAdminClient) {
+              await supabaseAdminClient.from('profiles').update({ last_login_at: new Date().toISOString() }).eq('id', user.id);
+            }
+            return res.json({
+              success: true,
+              message: `Welcome back to AARU Atelier, ${user.name}!`,
+              token: accessToken,
+              user: { id: user.id, email: user.email, name: user.name, phone: user.phone || '', role: String(user.role).toUpperCase(), status: user.status },
+              cart: user.cart || [], wishlist: user.wishlist || [], orders: getUserOrders(user)
+            });
+          }
+        }
+        return res.status(401).json({ error: 'Incorrect email or password. Please verify your credentials and try again.' });
+      }
+
+      // Legacy fallback only when Supabase server credentials are not configured.
       const user = usersDatabase.get(cleanEmail);
       if (!user) {
         return res.status(401).json({ error: 'Incorrect email or password. Please verify your credentials and try again.' });
@@ -2406,127 +2651,190 @@ async function startServer() {
   // ===========================================================================
 
   // 1. List all accounts with order counts and access status
-  app.get('/api/admin/users', (req: Request, res: Response) => {
-    const userList = Array.from(usersDatabase.values()).map(u => {
-      const normalizedEmail = u.email.toLowerCase().trim();
-      const userOrders = orders.filter(
-        o => o.userId === u.id || o.customerEmail?.toLowerCase().trim() === normalizedEmail
-      );
-      const roleUpper = (u.role || '').toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
-      return {
-        id: u.id,
-        email: u.email,
-        name: u.name,
-        phone: u.phone || '',
-        role: roleUpper,
-        status: u.status || 'ACTIVE',
-        createdAt: u.createdAt,
-        lastLoginAt: u.lastLoginAt,
-        ordersCount: userOrders.length,
-        totalSpend: userOrders.reduce((sum, o) => sum + (o.total || 0), 0)
-      };
-    });
+  app.get('/api/admin/users', async (req: Request, res: Response) => {
+    try {
+      if (supabaseAdminClient) {
+        const { data: profiles, error } = await supabaseAdminClient
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
 
-    res.json(userList);
+        const userList = (profiles || []).map((u: any) => {
+          const normalizedEmail = String(u.email || '').toLowerCase().trim();
+          const userOrders = orders.filter(
+            o => o.userId === u.id || o.customerEmail?.toLowerCase().trim() === normalizedEmail
+          );
+          return {
+            id: u.id,
+            email: u.email,
+            name: u.name,
+            phone: u.phone || '',
+            role: String(u.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER',
+            status: u.status || 'ACTIVE',
+            createdAt: u.created_at,
+            lastLoginAt: u.last_login_at,
+            ordersCount: userOrders.length,
+            totalSpend: userOrders.reduce((sum, o) => sum + (o.total || 0), 0)
+          };
+        });
+        return res.json(userList);
+      }
+
+      // Development/legacy fallback when the server-side Supabase key has not
+      // been configured yet.
+      const userList = Array.from(usersDatabase.values()).map(u => {
+        const normalizedEmail = u.email.toLowerCase().trim();
+        const userOrders = orders.filter(
+          o => o.userId === u.id || o.customerEmail?.toLowerCase().trim() === normalizedEmail
+        );
+        return {
+          id: u.id,
+          email: u.email,
+          name: u.name,
+          phone: u.phone || '',
+          role: String(u.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER',
+          status: u.status || 'ACTIVE',
+          createdAt: u.createdAt,
+          lastLoginAt: u.lastLoginAt,
+          ordersCount: userOrders.length,
+          totalSpend: userOrders.reduce((sum, o) => sum + (o.total || 0), 0)
+        };
+      });
+      return res.json(userList);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Failed to load user directory.' });
+    }
   });
 
   // 2. Grant, Revoke, or Suspend customer access
-  app.patch('/api/admin/users/:id/status', (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    const allowedStatuses: AccountStatus[] = ['ACTIVE', 'SUSPENDED', 'REVOKED'];
-    if (!status || !allowedStatuses.includes(status)) {
-      return res.status(400).json({ 
-        error: 'Invalid status. Permitted values: ACTIVE, SUSPENDED, REVOKED.' 
-      });
-    }
-
-    let targetUser: DbUser | undefined;
-    for (const u of usersDatabase.values()) {
-      if (u.id === id || u.email.toLowerCase() === id.toLowerCase()) {
-        targetUser = u;
-        break;
+  app.patch('/api/admin/users/:id/status', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const allowedStatuses: AccountStatus[] = ['ACTIVE', 'SUSPENDED', 'REVOKED'];
+      if (!status || !allowedStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status. Permitted values: ACTIVE, SUSPENDED, REVOKED.' });
       }
-    }
 
-    if (!targetUser) {
-      return res.status(404).json({ error: 'User account not found.' });
-    }
+      if (supabaseAdminClient) {
+        let { data: targetUser, error: lookupError } = await supabaseAdminClient
+          .from('profiles').select('*').eq('id', id).maybeSingle();
+        if (!targetUser && !lookupError) {
+          const byEmail = await supabaseAdminClient.from('profiles').select('*').eq('email', id.toLowerCase()).maybeSingle();
+          targetUser = byEmail.data;
+          lookupError = byEmail.error;
+        }
+        if (lookupError) throw lookupError;
+        if (!targetUser) return res.status(404).json({ error: 'User account not found.' });
 
-    // Safety: Protect primary root admin from accidental lock-out
-    if (targetUser.email === 'aarubymoni@admin.co.in' && status !== 'ACTIVE') {
-      return res.status(403).json({ 
-        error: 'Cannot suspend or revoke root administrator account (aarubymoni@admin.co.in).' 
-      });
-    }
+        if (String(targetUser.email).toLowerCase() === 'aarubymoni@admin.co.in' && status !== 'ACTIVE') {
+          return res.status(403).json({ error: 'Cannot suspend or revoke root administrator account.' });
+        }
 
-    targetUser.status = status;
-    console.log(`[Admin Access Management] Account ${targetUser.email} status updated to ${status}`);
+        const { data: updated, error } = await supabaseAdminClient
+          .from('profiles')
+          .update({ status, updated_at: new Date().toISOString() })
+          .eq('id', targetUser.id)
+          .select('*').single();
+        if (error) throw error;
 
-    res.json({
-      success: true,
-      message: `Account access for ${targetUser.email} is now ${status}.`,
-      user: {
-        id: targetUser.id,
-        email: targetUser.email,
-        name: targetUser.name,
-        role: (targetUser.role || '').toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER',
-        status: targetUser.status
+        const cached = usersDatabase.get(String(updated.email).toLowerCase());
+        if (cached) cached.status = status;
+
+        return res.json({
+          success: true,
+          message: `Account access for ${updated.email} is now ${status}.`,
+          user: {
+            id: updated.id, email: updated.email, name: updated.name,
+            role: String(updated.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER',
+            status: updated.status
+          }
+        });
       }
-    });
+
+      let targetUser: DbUser | undefined;
+      for (const u of usersDatabase.values()) {
+        if (u.id === id || u.email.toLowerCase() === id.toLowerCase()) { targetUser = u; break; }
+      }
+      if (!targetUser) return res.status(404).json({ error: 'User account not found.' });
+      if (targetUser.email === 'aarubymoni@admin.co.in' && status !== 'ACTIVE') {
+        return res.status(403).json({ error: 'Cannot suspend or revoke root administrator account.' });
+      }
+      targetUser.status = status;
+      return res.json({ success: true, message: `Account access for ${targetUser.email} is now ${status}.`, user: targetUser });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Failed to update account status.' });
+    }
   });
 
   // 3. Modify account role (USER <-> ADMIN)
-  app.patch('/api/admin/users/:id/role', (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { role } = req.body;
-
-    const roleUpper = (role || '').toUpperCase();
-    if (roleUpper !== 'ADMIN' && roleUpper !== 'USER') {
-      return res.status(400).json({ error: 'Role must be either USER or ADMIN.' });
-    }
-
-    let targetUser: DbUser | undefined;
-    for (const u of usersDatabase.values()) {
-      if (u.id === id || u.email.toLowerCase() === id.toLowerCase()) {
-        targetUser = u;
-        break;
+  app.patch('/api/admin/users/:id/role', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const roleUpper = String(req.body.role || '').toUpperCase();
+      if (roleUpper !== 'ADMIN' && roleUpper !== 'USER') {
+        return res.status(400).json({ error: 'Role must be either USER or ADMIN.' });
       }
-    }
 
-    if (!targetUser) {
-      return res.status(404).json({ error: 'User account not found.' });
-    }
+      if (supabaseAdminClient) {
+        let { data: targetUser, error: lookupError } = await supabaseAdminClient
+          .from('profiles').select('*').eq('id', id).maybeSingle();
+        if (!targetUser && !lookupError) {
+          const byEmail = await supabaseAdminClient.from('profiles').select('*').eq('email', id.toLowerCase()).maybeSingle();
+          targetUser = byEmail.data;
+          lookupError = byEmail.error;
+        }
+        if (lookupError) throw lookupError;
+        if (!targetUser) return res.status(404).json({ error: 'User account not found.' });
+        if (String(targetUser.email).toLowerCase() === 'aarubymoni@admin.co.in' && roleUpper !== 'ADMIN') {
+          return res.status(403).json({ error: 'Cannot demote the primary root administrator.' });
+        }
 
-    // Safety: Protect primary root admin from demotion
-    if (targetUser.email === 'aarubymoni@admin.co.in' && roleUpper !== 'ADMIN') {
-      return res.status(403).json({ 
-        error: 'Cannot demote the primary root administrator (aarubymoni@admin.co.in).' 
-      });
-    }
+        const { data: updated, error } = await supabaseAdminClient
+          .from('profiles')
+          .update({ role: roleUpper, updated_at: new Date().toISOString() })
+          .eq('id', targetUser.id)
+          .select('*').single();
+        if (error) throw error;
 
-    targetUser.role = roleUpper as UserRole;
-    console.log(`[Admin Access Management] Account ${targetUser.email} role updated to ${roleUpper}`);
+        // Keep Supabase app_metadata authoritative for server/client role checks.
+        await supabaseAdminClient.auth.admin.updateUserById(targetUser.id, {
+          app_metadata: { role: roleUpper }
+        });
 
-    res.json({
-      success: true,
-      message: `Account role for ${targetUser.email} updated to ${roleUpper}.`,
-      user: {
-        id: targetUser.id,
-        email: targetUser.email,
-        name: targetUser.name,
-        role: roleUpper,
-        status: targetUser.status
+        const cached = usersDatabase.get(String(updated.email).toLowerCase());
+        if (cached) cached.role = roleUpper as UserRole;
+
+        return res.json({
+          success: true,
+          message: `Account role for ${updated.email} updated to ${roleUpper}.`,
+          user: {
+            id: updated.id, email: updated.email, name: updated.name,
+            role: roleUpper, status: updated.status
+          }
+        });
       }
-    });
+
+      let targetUser: DbUser | undefined;
+      for (const u of usersDatabase.values()) {
+        if (u.id === id || u.email.toLowerCase() === id.toLowerCase()) { targetUser = u; break; }
+      }
+      if (!targetUser) return res.status(404).json({ error: 'User account not found.' });
+      if (targetUser.email === 'aarubymoni@admin.co.in' && roleUpper !== 'ADMIN') {
+        return res.status(403).json({ error: 'Cannot demote the primary root administrator.' });
+      }
+      targetUser.role = roleUpper as UserRole;
+      return res.json({ success: true, message: `Account role for ${targetUser.email} updated to ${roleUpper}.`, user: targetUser });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Failed to update user role.' });
+    }
   });
 
   // 4. Admin provision new user account with specified role & status
-  app.post('/api/admin/users', (req: Request, res: Response) => {
+  app.post('/api/admin/users', async (req: Request, res: Response) => {
     try {
       const { email, name, phone, password, role = 'USER', status = 'ACTIVE' } = req.body;
-
       if (!email || !name || !password) {
         return res.status(400).json({ error: 'Email, Full Name, and Password are required.' });
       }
@@ -2535,73 +2843,104 @@ async function startServer() {
       if (!validateEmailFormat(cleanEmail)) {
         return res.status(400).json({ error: 'Invalid email address format.' });
       }
+      const roleUpper: UserRole = String(role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
+      const statusValue: AccountStatus = ['ACTIVE', 'SUSPENDED', 'REVOKED'].includes(status) ? status : 'ACTIVE';
+
+      if (supabaseAdminClient) {
+        const { data: created, error: authError } = await supabaseAdminClient.auth.admin.createUser({
+          email: cleanEmail,
+          password,
+          email_confirm: true,
+          user_metadata: {
+            name: sanitizeAuthInput(name),
+            display_name: sanitizeAuthInput(name),
+            phone: sanitizeAuthInput(phone) || ''
+          },
+          app_metadata: { role: roleUpper }
+        });
+        if (authError || !created.user) {
+          return res.status(409).json({ error: authError?.message || 'Unable to create authentication account.' });
+        }
+
+        const { data: profile, error: profileError } = await supabaseAdminClient
+          .from('profiles')
+          .upsert({
+            id: created.user.id,
+            email: cleanEmail,
+            name: sanitizeAuthInput(name),
+            phone: sanitizeAuthInput(phone) || '',
+            role: roleUpper,
+            status: statusValue
+          }, { onConflict: 'id' })
+          .select('*').single();
+        if (profileError) {
+          await supabaseAdminClient.auth.admin.deleteUser(created.user.id);
+          throw profileError;
+        }
+
+        return res.status(201).json({
+          success: true,
+          message: `Account created for ${profile.name} with role ${roleUpper}.`,
+          user: {
+            id: profile.id, email: profile.email, name: profile.name,
+            phone: profile.phone || '', role: roleUpper, status: statusValue,
+            createdAt: profile.created_at
+          }
+        });
+      }
 
       if (usersDatabase.has(cleanEmail)) {
         return res.status(409).json({ error: 'An account with this email address already exists.' });
       }
-
-      const roleUpper: UserRole = (role || '').toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
-      const statusValue: AccountStatus = ['ACTIVE', 'SUSPENDED', 'REVOKED'].includes(status) ? status : 'ACTIVE';
-      const passwordHash = hashPassword(password);
-
       const newUser: DbUser = {
-        id: `usr-${Date.now()}`,
-        email: cleanEmail,
-        name: sanitizeAuthInput(name),
-        phone: sanitizeAuthInput(phone) || '',
-        passwordHash,
-        role: roleUpper,
-        status: statusValue,
-        createdAt: new Date().toISOString(),
-        cart: [],
-        wishlist: []
+        id: `usr-${Date.now()}`, email: cleanEmail, name: sanitizeAuthInput(name),
+        phone: sanitizeAuthInput(phone) || '', passwordHash: hashPassword(password),
+        role: roleUpper, status: statusValue, createdAt: new Date().toISOString(), cart: [], wishlist: []
       };
-
       usersDatabase.set(cleanEmail, newUser);
-
-      res.status(201).json({
-        success: true,
-        message: `Account created for ${newUser.name} with role ${roleUpper}.`,
-        user: {
-          id: newUser.id,
-          email: newUser.email,
-          name: newUser.name,
-          phone: newUser.phone,
-          role: roleUpper,
-          status: newUser.status,
-          createdAt: newUser.createdAt
-        }
-      });
+      return res.status(201).json({ success: true, message: `Account created for ${newUser.name}.`, user: newUser });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Failed to create user account.' });
+      return res.status(500).json({ error: err.message || 'Failed to create user account.' });
     }
   });
 
   // 5. Delete customer account
-  app.delete('/api/admin/users/:id', (req: Request, res: Response) => {
-    const { id } = req.params;
+  app.delete('/api/admin/users/:id', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
 
-    let targetKey: string | undefined;
-    let targetUser: DbUser | undefined;
+      if (supabaseAdminClient) {
+        let { data: targetUser, error: lookupError } = await supabaseAdminClient
+          .from('profiles').select('*').eq('id', id).maybeSingle();
+        if (!targetUser && !lookupError) {
+          const byEmail = await supabaseAdminClient.from('profiles').select('*').eq('email', id.toLowerCase()).maybeSingle();
+          targetUser = byEmail.data;
+          lookupError = byEmail.error;
+        }
+        if (lookupError) throw lookupError;
+        if (!targetUser) return res.status(404).json({ error: 'User account not found.' });
+        if (String(targetUser.email).toLowerCase() === 'aarubymoni@admin.co.in') {
+          return res.status(403).json({ error: 'Cannot delete root administrator account.' });
+        }
 
-    for (const [email, u] of usersDatabase.entries()) {
-      if (u.id === id || u.email.toLowerCase() === id.toLowerCase()) {
-        targetKey = email;
-        targetUser = u;
-        break;
+        const { error: deleteError } = await supabaseAdminClient.auth.admin.deleteUser(targetUser.id);
+        if (deleteError) throw deleteError;
+        usersDatabase.delete(String(targetUser.email).toLowerCase());
+        return res.json({ success: true, message: `Account ${targetUser.email} has been removed.` });
       }
-    }
 
-    if (!targetUser || !targetKey) {
-      return res.status(404).json({ error: 'User account not found.' });
+      let targetKey: string | undefined;
+      let targetUser: DbUser | undefined;
+      for (const [email, u] of usersDatabase.entries()) {
+        if (u.id === id || u.email.toLowerCase() === id.toLowerCase()) { targetKey = email; targetUser = u; break; }
+      }
+      if (!targetUser || !targetKey) return res.status(404).json({ error: 'User account not found.' });
+      if (targetUser.email === 'aarubymoni@admin.co.in') return res.status(403).json({ error: 'Cannot delete root administrator account.' });
+      usersDatabase.delete(targetKey);
+      return res.json({ success: true, message: `Account ${targetUser.email} has been removed.` });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Failed to delete account.' });
     }
-
-    if (targetUser.email === 'aarubymoni@admin.co.in') {
-      return res.status(403).json({ error: 'Cannot delete root administrator account.' });
-    }
-
-    usersDatabase.delete(targetKey);
-    res.json({ success: true, message: `Account ${targetUser.email} has been removed.` });
   });
 
   // Dedicated Admin endpoints for Products, Orders, Announcement & Settings
@@ -2686,13 +3025,13 @@ async function startServer() {
     res.json(order);
   });
 
-  app.get('/api/admin/settings', (req: Request, res: Response) => {
-    res.json({
-      announcement,
-      totalPatrons: usersDatabase.size,
-      totalOrders: orders.length,
-      totalProducts: products.length
-    });
+  app.get('/api/admin/settings', async (req: Request, res: Response) => {
+    let totalPatrons = usersDatabase.size;
+    if (supabaseAdminClient) {
+      const { count } = await supabaseAdminClient.from('profiles').select('id', { count: 'exact', head: true });
+      if (typeof count === 'number') totalPatrons = count;
+    }
+    res.json({ announcement, totalPatrons, totalOrders: orders.length, totalProducts: products.length });
   });
 
   app.post('/api/admin/settings', (req: Request, res: Response) => {
@@ -2933,8 +3272,8 @@ async function startServer() {
   });
 
   // Current Session & User Data Hydration
-  app.get('/api/auth/me', (req: Request, res: Response) => {
-    const user = getAuthenticatedUserFromRequest(req);
+  app.get('/api/auth/me', async (req: Request, res: Response) => {
+    const user = await getAuthenticatedUserFromRequest(req);
     if (!user) {
       return res.json({ 
         authenticated: false, 
@@ -2967,8 +3306,8 @@ async function startServer() {
   });
 
   // Explicit User Data Hydration Gateway
-  app.get('/api/user/data', (req: Request, res: Response) => {
-    const user = getAuthenticatedUserFromRequest(req);
+  app.get('/api/user/data', async (req: Request, res: Response) => {
+    const user = await getAuthenticatedUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ 
         success: false, 
@@ -2996,26 +3335,32 @@ async function startServer() {
   });
 
   // Sync Cart to User Database Record
-  app.post('/api/user/cart', (req: Request, res: Response) => {
-    const user = getAuthenticatedUserFromRequest(req);
+  app.post('/api/user/cart', async (req: Request, res: Response) => {
+    const user = await getAuthenticatedUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ error: 'Sign in required to persist shopping bag.' });
     }
 
     const { cart } = req.body;
     user.cart = Array.isArray(cart) ? cart : [];
+    if (supabaseAdminClient) {
+      await supabaseAdminClient.from('profiles').update({ cart: user.cart, updated_at: new Date().toISOString() }).eq('id', user.id);
+    }
     res.json({ success: true, cart: user.cart });
   });
 
   // Sync Wishlist to User Database Record
-  app.post('/api/user/wishlist', (req: Request, res: Response) => {
-    const user = getAuthenticatedUserFromRequest(req);
+  app.post('/api/user/wishlist', async (req: Request, res: Response) => {
+    const user = await getAuthenticatedUserFromRequest(req);
     if (!user) {
       return res.status(401).json({ error: 'Sign in required to persist wishlist.' });
     }
 
     const { wishlist } = req.body;
     user.wishlist = Array.isArray(wishlist) ? wishlist : [];
+    if (supabaseAdminClient) {
+      await supabaseAdminClient.from('profiles').update({ wishlist: user.wishlist, updated_at: new Date().toISOString() }).eq('id', user.id);
+    }
     res.json({ success: true, wishlist: user.wishlist });
   });
 

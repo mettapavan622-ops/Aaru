@@ -176,20 +176,28 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
       const appUser = data.user;
 
-      // Save user session in localStorage for app state continuity
-      localStorage.setItem('aaru_user_session', JSON.stringify(appUser));
-      if (data.session?.access_token) {
-        localStorage.setItem('aaru_auth_token', data.session.access_token);
-        localStorage.setItem('aaru_supabase_token', data.session.access_token);
+      // When Supabase email confirmation is enabled, account creation succeeds
+      // without creating a browser session. Keep the user on the auth screen.
+      if (!data.session) {
+        setSuccessMessage('Account created successfully. Please check your email and confirm your account before signing in.');
+        setPassword('');
+        setConfirmPassword('');
+        setTimeout(() => setAuthMode('login'), 900);
+        return;
       }
+
+      // Supabase is the persistent authentication source of truth.
+      localStorage.setItem('aaru_user_session', JSON.stringify(appUser));
+      localStorage.setItem('aaru_auth_token', data.session.access_token);
+      localStorage.setItem('aaru_supabase_token', data.session.access_token);
       
       setSuccessMessage(`Account created successfully! Welcome to AARU Atelier, ${appUser.name}.`);
 
       setTimeout(() => {
         onLoginSuccess(appUser, {
-          cart: [],
-          wishlist: [],
-          orders: []
+          cart: (data as any).cart || [],
+          wishlist: (data as any).wishlist || [],
+          orders: (data as any).orders || []
         });
         if (onClose) onClose();
       }, 500);

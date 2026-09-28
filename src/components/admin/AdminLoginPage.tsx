@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Lock, Mail, Eye, EyeOff, Shield, ArrowLeft, AlertCircle, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { User } from '../../types';
 import { AaruLogo } from '../AaruLogo';
+import { signInAdminWithSupabase, parseSupabaseAuthError } from '../../lib/supabaseAuth';
 
 interface AdminLoginPageProps {
   onLoginSuccess: (adminUser: User, token: string) => void;
@@ -29,33 +30,43 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          password
-        })
-      });
+      // Primary admin authentication path: persistent Supabase Auth + the
+      // server-authoritative ADMIN role from public.profiles.
+      try {
+        const data = await signInAdminWithSupabase(email.trim(), password);
+        const appUser = data.user;
+        const token = data.session?.access_token || '';
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        // Generic error message without leaking sensitive information
-        setErrorMessage(data.error || 'Invalid administrator email or password.');
+        if (token) {
+          localStorage.setItem('aaru_auth_token', token);
+          localStorage.setItem('aaru_supabase_token', token);
+        }
+        localStorage.setItem('aaru_user_session', JSON.stringify(appUser));
+        onLoginSuccess(appUser, token);
         return;
-      }
+      } catch (supabaseError: any) {
+        // Backward compatibility: the existing root admin may still exist only
+        // in the legacy AARU admin store. Try that path before failing.
+        const response = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), password })
+        });
+        const data = await response.json().catch(() => ({}));
 
-      // Store authenticated admin credentials in localStorage
-      if (data.token) {
-        localStorage.setItem('aaru_auth_token', data.token);
-      }
-      localStorage.setItem('aaru_user_session', JSON.stringify(data.user));
+        if (!response.ok || !data.success) {
+          const friendly = parseSupabaseAuthError(supabaseError);
+          setErrorMessage(data.error || (friendly === 'Incorrect email or password. Please check your credentials and try again.'
+            ? 'Invalid administrator email or password.'
+            : friendly));
+          return;
+        }
 
-      onLoginSuccess(data.user, data.token);
-    } catch (err: any) {
+        if (data.token) localStorage.setItem('aaru_auth_token', data.token);
+        localStorage.setItem('aaru_user_session', JSON.stringify(data.user));
+        onLoginSuccess(data.user, data.token);
+      }
+    } catch {
       setErrorMessage('Unable to connect to the authentication server. Please try again.');
     } finally {
       setIsLoading(false);
