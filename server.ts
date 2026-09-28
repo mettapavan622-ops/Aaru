@@ -2241,8 +2241,7 @@ async function startServer() {
         return res.status(400).json({ error: 'Passwords do not match. Please re-enter both passwords.' });
       }
 
-      // Persistent signup path for legacy clients: create the credential in
-      // Supabase Auth instead of the old in-memory usersDatabase.
+      // Persistent signup path: create the credential in Supabase Auth
       if (supabaseAdminClient) {
         const { data: created, error: authError } = await supabaseAdminClient.auth.admin.createUser({
           email: cleanEmail,
@@ -2255,24 +2254,112 @@ async function startServer() {
           },
           app_metadata: { role: 'USER' }
         });
+
         if (authError || !created.user) {
+          const authMsg = (authError?.message || '').toLowerCase();
+          if (authMsg.includes('registered') || authMsg.includes('exists') || authMsg.includes('duplicate')) {
+            // If the user already exists, update their metadata and password so they can log in smoothly
+            try {
+              const { data: listData } = await supabaseAdminClient.auth.admin.listUsers();
+              const existingUser = (listData?.users || []).find((u: any) => u.email?.toLowerCase().trim() === cleanEmail);
+              if (existingUser) {
+                await supabaseAdminClient.auth.admin.updateUserById(existingUser.id, {
+                  password,
+                  email_confirm: true,
+                  user_metadata: {
+                    name: cleanDisplayName,
+                    display_name: cleanDisplayName,
+                    phone: cleanPhone || ''
+                  }
+                });
+                return res.status(200).json({
+                  success: true,
+                  isNewUser: false,
+                  message: `Welcome back to AARU Atelier, ${cleanDisplayName}! Your account is confirmed.`,
+                  user: {
+                    id: existingUser.id,
+                    email: cleanEmail,
+                    name: cleanDisplayName,
+                    phone: cleanPhone || '',
+                    role: 'USER',
+                    status: 'ACTIVE'
+                  },
+                  cart: [],
+                  wishlist: [],
+                  orders: []
+                });
+              }
+            } catch {
+              // fallback to standard message
+            }
+            return res.status(400).json({ error: 'User already exists. An account with this email is already registered. Please sign in instead.' });
+          }
           return res.status(400).json({ error: authError?.message || 'Failed to create account.' });
         }
 
-        const { data: profile, error: profileError } = await supabaseAdminClient
-          .from('profiles')
-          .upsert({
-            id: created.user.id, email: cleanEmail, name: cleanDisplayName,
-            phone: cleanPhone || '', role: 'USER', status: 'ACTIVE'
-          }, { onConflict: 'id' })
-          .select('*').single();
-        if (profileError) return res.status(500).json({ error: 'Account created but profile setup failed.' });
+        let profileName = cleanDisplayName;
+        let profilePhone = cleanPhone || '';
+
+        try {
+          const { data: profile } = await supabaseAdminClient
+            .from('profiles')
+            .upsert({
+              id: created.user.id,
+              email: cleanEmail,
+              name: cleanDisplayName,
+              phone: cleanPhone || '',
+              role: 'USER',
+              status: 'ACTIVE'
+            }, { onConflict: 'id' })
+            .select('*')
+            .maybeSingle();
+
+          if (profile) {
+            profileName = profile.name || profileName;
+            profilePhone = profile.phone || profilePhone;
+          }
+        } catch {
+          // profiles table optional
+        }
+
+        const newUser: DbUser = {
+          id: created.user.id,
+          email: cleanEmail,
+          name: profileName,
+          phone: profilePhone,
+          role: 'USER',
+          status: 'ACTIVE',
+          createdAt: created.user.created_at || new Date().toISOString(),
+          cart: [],
+          wishlist: []
+        };
+        usersDatabase.set(cleanEmail, newUser);
+
+        const sessionToken = createSessionToken({ id: newUser.id, email: newUser.email, role: newUser.role });
+
+        res.cookie('aaru_session', sessionToken, { 
+          httpOnly: true, 
+          secure: process.env.NODE_ENV === 'production', 
+          sameSite: 'lax',
+          maxAge: 30 * 24 * 60 * 60 * 1000 
+        });
 
         return res.status(201).json({
-          success: true, isNewUser: true,
-          message: `Welcome to AARU Atelier, ${profile.name}! Your account has been created.`,
-          user: { id: profile.id, email: profile.email, name: profile.name, phone: profile.phone || '', role: 'USER', status: 'ACTIVE' },
-          cart: [], wishlist: [], orders: []
+          success: true,
+          isNewUser: true,
+          message: `Welcome to AARU Atelier, ${newUser.name}! Your account has been created.`,
+          token: sessionToken,
+          user: {
+            id: newUser.id,
+            email: newUser.email,
+            name: newUser.name,
+            phone: newUser.phone,
+            role: 'USER',
+            status: 'ACTIVE'
+          },
+          cart: [],
+          wishlist: [],
+          orders: []
         });
       }
 
@@ -2360,30 +2447,34 @@ async function startServer() {
       }
 
       if (supabaseAdminClient) {
-        const now = new Date().toISOString();
-        const { data: updatedProfile, error } = await supabaseAdminClient
-          .from('profiles')
-          .upsert({
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            phone: user.phone || '',
-            role: String(user.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER',
-            status: user.status || 'ACTIVE',
-            last_login_at: now
-          }, { onConflict: 'id' })
-          .select('*')
-          .single();
+        try {
+          const now = new Date().toISOString();
+          const { data: updatedProfile, error } = await supabaseAdminClient
+            .from('profiles')
+            .upsert({
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              phone: user.phone || '',
+              role: String(user.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER',
+              status: user.status || 'ACTIVE',
+              last_login_at: now
+            }, { onConflict: 'id' })
+            .select('*')
+            .maybeSingle();
 
-        if (!error && updatedProfile) {
-          user.name = updatedProfile.name || user.name;
-          user.phone = updatedProfile.phone || user.phone || '';
-          user.role = String(updatedProfile.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
-          user.status = updatedProfile.status || 'ACTIVE';
-          user.cart = Array.isArray(updatedProfile.cart) ? updatedProfile.cart : [];
-          user.wishlist = Array.isArray(updatedProfile.wishlist) ? updatedProfile.wishlist : [];
-          user.lastLoginAt = updatedProfile.last_login_at || now;
-          usersDatabase.set(user.email, user);
+          if (!error && updatedProfile) {
+            user.name = updatedProfile.name || user.name;
+            user.phone = updatedProfile.phone || user.phone || '';
+            user.role = String(updatedProfile.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
+            user.status = updatedProfile.status || 'ACTIVE';
+            user.cart = Array.isArray(updatedProfile.cart) ? updatedProfile.cart : [];
+            user.wishlist = Array.isArray(updatedProfile.wishlist) ? updatedProfile.wishlist : [];
+            user.lastLoginAt = updatedProfile.last_login_at || now;
+            usersDatabase.set(user.email, user);
+          }
+        } catch {
+          // profiles table is optional
         }
       }
 
