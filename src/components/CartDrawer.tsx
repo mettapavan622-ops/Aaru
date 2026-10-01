@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { CartItem } from '../types';
-import { X, Trash2, ArrowRight, ShieldCheck, Tag, ShoppingBag } from 'lucide-react';
+import { CartItem, PromoCode } from '../types';
+import { X, Trash2, ArrowRight, ShieldCheck, Tag, ShoppingBag, Sparkles, Check, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -13,6 +13,7 @@ interface CartDrawerProps {
   onApplyPromo: (code: string) => Promise<{ success: boolean; message: string; discount?: number }> | { success: boolean; message: string; discount?: number } | boolean;
   onRemovePromo?: () => void;
   promoDiscount: number;
+  coupons?: PromoCode[];
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
@@ -25,12 +26,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   appliedPromo,
   onApplyPromo,
   onRemovePromo,
-  promoDiscount
+  promoDiscount,
+  coupons = []
 }) => {
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');
   const [promoSuccess, setPromoSuccess] = useState('');
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [isCouponsListOpen, setIsCouponsListOpen] = useState(true);
 
   if (!isOpen) return null;
 
@@ -70,6 +73,36 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           setPromoError(result.message || 'Invalid or inactive coupon code.');
         } else {
           setPromoSuccess(result.message || 'Privilege discount applied successfully!');
+          setPromoInput('');
+        }
+      }
+    } catch (err: any) {
+      setPromoError(err.message || 'Error validating coupon code.');
+    } finally {
+      setIsApplyingPromo(false);
+    }
+  };
+
+  const handleQuickApply = async (code: string) => {
+    setPromoInput(code);
+    setPromoError('');
+    setPromoSuccess('');
+    setIsApplyingPromo(true);
+
+    try {
+      const result = await onApplyPromo(code);
+      if (typeof result === 'boolean') {
+        if (!result) {
+          setPromoError('Invalid or inactive coupon code.');
+        } else {
+          setPromoSuccess(`Coupon '${code}' applied successfully!`);
+          setPromoInput('');
+        }
+      } else if (result && typeof result === 'object') {
+        if (!result.success) {
+          setPromoError(result.message || 'Invalid or inactive coupon code.');
+        } else {
+          setPromoSuccess(result.message || `Coupon '${code}' applied successfully!`);
           setPromoInput('');
         }
       }
@@ -202,7 +235,84 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
         {/* Footer with Calculations and Checkout */}
         {items.length > 0 && (
-          <div className="p-5 border-t border-[#E8DFD5] bg-[#FAF7F2] space-y-4">
+          <div className="p-5 border-t border-[#E8DFD5] bg-[#FAF7F2] space-y-3.5">
+            {/* Available Coupons & Offers Showcase */}
+            {coupons.filter(c => c.isActive !== false).length > 0 && (
+              <div className="border border-[#D4C7B5] bg-white shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setIsCouponsListOpen(!isCouponsListOpen)}
+                  className="w-full px-3 py-2 bg-[#FAF7F2] border-b border-[#E8DFD5] flex items-center justify-between text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[#0F4C5C]">
+                    <Sparkles className="w-3.5 h-3.5 text-[#8C6D37]" />
+                    <span>Available Privilege Coupons ({coupons.filter(c => c.isActive !== false).length})</span>
+                  </div>
+                  {isCouponsListOpen ? (
+                    <ChevronUp className="w-3.5 h-3.5 text-[#5C5549]" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 text-[#5C5549]" />
+                  )}
+                </button>
+
+                {isCouponsListOpen && (
+                  <div className="p-2.5 max-h-48 overflow-y-auto divide-y divide-[#F0EAE1] space-y-2">
+                    {coupons.filter(c => c.isActive !== false).map((coupon) => {
+                      const qualifies = subtotal >= (coupon.minOrderValue || 0);
+                      const isCurrentApplied = appliedPromo?.toUpperCase() === coupon.code.toUpperCase();
+
+                      return (
+                        <div key={coupon.code} className="pt-2 first:pt-0 space-y-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs font-bold text-[#0F4C5C] bg-[#FAF7F2] px-1.5 py-0.5 border border-[#0F4C5C]/20">
+                                {coupon.code}
+                              </span>
+                              <span className="text-[10px] bg-[#8C6D37] text-white font-bold px-1.5 py-0.5">
+                                {coupon.discountPercent}% OFF
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={isCurrentApplied || isApplyingPromo}
+                              onClick={() => handleQuickApply(coupon.code)}
+                              className={`px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                                isCurrentApplied
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  : qualifies
+                                    ? 'bg-[#0F4C5C] hover:bg-[#0b3844] text-white'
+                                    : 'bg-[#FAF7F2] hover:bg-[#E8DFD5] text-[#5C5549] border border-[#D4C7B5]'
+                              }`}
+                            >
+                              {isCurrentApplied ? 'Applied ✓' : 'Apply'}
+                            </button>
+                          </div>
+                          
+                          <p className="text-[11px] text-[#24211E] font-medium leading-tight">
+                            {coupon.description}
+                          </p>
+
+                          <div className="text-[10px] text-[#736B5E] flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                            <span>
+                              {coupon.minOrderValue > 0 
+                                ? `Min. spend: ₹${coupon.minOrderValue.toLocaleString('en-IN')}` 
+                                : 'No minimum requirement'}
+                            </span>
+                            {coupon.maxDiscount && (
+                              <span>• Max savings: ₹${coupon.maxDiscount.toLocaleString('en-IN')}</span>
+                            )}
+                            <span className={qualifies ? 'text-emerald-700 font-semibold' : 'text-amber-700 font-medium'}>
+                              {qualifies ? '• Conditions met!' : `• Add ₹${((coupon.minOrderValue || 0) - subtotal).toLocaleString('en-IN')} more to unlock`}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Promo Code Input */}
             <form onSubmit={handleApplyPromoCode} className="flex gap-2">
               <div className="relative flex-1">

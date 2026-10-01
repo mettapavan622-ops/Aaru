@@ -17,7 +17,8 @@ import {
   Phone,
   Mail,
   LogIn,
-  UserPlus
+  UserPlus,
+  Tag
 } from 'lucide-react';
 import { Product, AnnouncementSettings, User, Category } from '../types';
 import { CategoriesMegaMenu } from './CategoriesMegaMenu';
@@ -46,6 +47,8 @@ interface HeaderProps {
   currentRole?: 'user' | 'admin';
   onToggleMode?: (mode: 'user' | 'admin') => void;
   onRoleSwitch?: (mode: 'user' | 'admin') => void;
+  onOpenCoupons?: () => void;
+  activeCouponsCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -69,7 +72,9 @@ export const Header: React.FC<HeaderProps> = ({
   currentMode: propCurrentMode,
   currentRole,
   onToggleMode: propOnToggleMode,
-  onRoleSwitch
+  onRoleSwitch,
+  onOpenCoupons,
+  activeCouponsCount = 0
 }) => {
   const currentMode = propCurrentMode || currentRole || 'user';
   const onToggleMode = propOnToggleMode || onRoleSwitch || (() => {});
@@ -132,22 +137,31 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="h-1 w-full bg-gradient-to-r from-[#072F38] via-[#0F4C5C] to-[#072F38]" />
 
       {/* Dynamic Announcement Bar */}
-      {announcement.isActive && (
+      {(announcement.isActive !== false && (announcement.text || announcement.saleHighlight)) && (
         <div className="bg-[#0F4C5C] text-[#FAF7F2] text-[11px] md:text-xs tracking-wider py-1.5 px-4 text-center border-b border-[#0F4C5C]/40">
-          <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
+          <div className="max-w-7xl mx-auto flex items-center justify-center gap-2 flex-wrap sm:flex-nowrap">
             {announcement.isSaleActive && (
-              <span className="bg-[#C08081] text-white text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-none">
-                Exclusive
+              <span className="bg-[#C08081] text-white text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-none shrink-0">
+                {announcement.saleHighlight || 'Exclusive'}
               </span>
             )}
             <p className="truncate font-light text-[#FAF7F2]">
-              {announcement.text}
+              {announcement.text || announcement.saleHighlight}
             </p>
-            {announcement.linkText && (
+            {onOpenCoupons && (
+              <button 
+                type="button" 
+                onClick={onOpenCoupons}
+                className="underline underline-offset-4 hover:text-[#D4C7B5] font-semibold text-[#E8B4B8] transition-colors ml-1 cursor-pointer shrink-0"
+              >
+                {announcement.linkText || (activeCouponsCount > 0 ? `View Privileges (${activeCouponsCount})` : 'Explore Offers')}
+              </button>
+            )}
+            {!onOpenCoupons && announcement.linkText && (
               <button 
                 type="button" 
                 onClick={() => setActiveTab('sale')}
-                className="underline underline-offset-4 hover:text-[#D4C7B5] font-medium transition-colors ml-1 cursor-pointer"
+                className="underline underline-offset-4 hover:text-[#D4C7B5] font-medium transition-colors ml-1 cursor-pointer shrink-0"
               >
                 {announcement.linkText}
               </button>
@@ -261,6 +275,24 @@ export const Header: React.FC<HeaderProps> = ({
               - Balanced width matching left side on desktop
               - Wishlist, Cart with Counter, and User Account Dropdown */}
           <div className="flex items-center justify-end gap-1.5 sm:gap-2.5 lg:gap-3 shrink-0">
+            {/* Privileges / Coupons Button */}
+            {onOpenCoupons && (
+              <button
+                type="button"
+                onClick={onOpenCoupons}
+                title="View Privilege Coupons & Offers"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#FAF7F2] hover:bg-[#F3ECE0] border border-[#D4C7B5] text-[#8C6D37] text-xs font-semibold rounded-none transition-colors cursor-pointer"
+              >
+                <Tag className="w-3.5 h-3.5" />
+                <span>Offers</span>
+                {activeCouponsCount > 0 && (
+                  <span className="bg-[#8C6D37] text-white text-[9px] font-bold px-1.5 py-0.5">
+                    {activeCouponsCount}
+                  </span>
+                )}
+              </button>
+            )}
+
             {/* Wishlist Button */}
             <button
               id="header-wishlist-btn"

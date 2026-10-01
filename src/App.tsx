@@ -47,6 +47,7 @@ import { WhatsAppButton } from './components/WhatsAppButton';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AdminLoginPage } from './components/admin/AdminLoginPage';
 import { PolicyPage, PolicyType } from './components/PolicyPages';
+import { CouponsModal } from './components/CouponsModal';
 import { ShieldAlert } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { mapSupabaseUserToAppUser } from './lib/supabaseAuth';
@@ -261,9 +262,22 @@ export default function App() {
   const [appliedPromo, setAppliedPromo] = useState('');
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [coupons, setCoupons] = useState<PromoCode[]>([]);
+  const [isCouponsModalOpen, setIsCouponsModalOpen] = useState(false);
 
   // Real-Time Live Notification Toast
   const [liveUpdateNotice, setLiveUpdateNotice] = useState<string | null>(null);
+
+  const fetchAnnouncement = async () => {
+    try {
+      const res = await fetch('/api/cms/announcement');
+      const data = await res.json();
+      if (data && (data.text || data.saleHighlight)) {
+        setAnnouncement(data);
+      }
+    } catch (err) {
+      console.error('Failed to load announcement from API:', err);
+    }
+  };
 
   const fetchCoupons = async () => {
     try {
@@ -424,16 +438,21 @@ export default function App() {
       })
       .catch(err => console.error('Failed to load products from API:', err));
 
-    fetch('/api/cms/announcement')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.text) {
-          setAnnouncement(data);
-        }
-      })
-      .catch(err => console.error('Failed to load announcement from API:', err));
-
+    fetchAnnouncement();
     fetchCoupons();
+
+    // Dynamically poll active announcement and coupons every 8 seconds
+    const syncInterval = setInterval(() => {
+      fetchAnnouncement();
+      fetchCoupons();
+    }, 8000);
+
+    const handleWindowFocus = () => {
+      fetchAnnouncement();
+      fetchCoupons();
+    };
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleWindowFocus);
 
     // Hydrate user cart, wishlist, and orders from database session if authenticated
     const token = localStorage.getItem('aaru_auth_token');
@@ -460,6 +479,12 @@ export default function App() {
         })
         .catch(() => {});
     }
+
+    return () => {
+      clearInterval(syncInterval);
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleWindowFocus);
+    };
   }, []);
 
   // Real-Time Admin-to-User Synchronization Engine (WebSocket + SSE + Cross-Tab)
@@ -801,14 +826,27 @@ export default function App() {
   };
 
   const handleAdminUpdateAnnouncement = async (newSettings: Partial<AnnouncementSettings>) => {
-    const res = await fetch('/api/cms/announcement', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newSettings)
-    });
-    const updated = await res.json();
-    setAnnouncement(updated);
-    realtimeSync.broadcastLocally({ type: 'ANNOUNCEMENT_UPDATED', announcement: updated });
+    try {
+      const token = localStorage.getItem('aaru_auth_token');
+      const res = await fetch('/api/cms/announcement', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          ...newSettings,
+          isActive: true
+        })
+      });
+      const updated = await res.json();
+      if (updated && (updated.text || updated.saleHighlight)) {
+        setAnnouncement(updated);
+        realtimeSync.broadcastLocally({ type: 'ANNOUNCEMENT_UPDATED', announcement: updated });
+      }
+    } catch (err) {
+      console.error('Failed to update announcement:', err);
+    }
   };
 
   const handleAdminUpdateOrderStatus = async (
@@ -977,6 +1015,8 @@ export default function App() {
         currentMode={currentDashboard}
         onRoleSwitch={setCurrentDashboard}
         onToggleMode={setCurrentDashboard}
+        onOpenCoupons={() => setIsCouponsModalOpen(true)}
+        activeCouponsCount={coupons.filter(c => c.isActive !== false).length}
         cartCount={cartItems.reduce((s, i) => s + i.quantity, 0)}
         wishlistCount={(wishlistProductIds || []).length}
         currentUser={currentUser}
@@ -1216,6 +1256,8 @@ export default function App() {
           <div className="space-y-20 lg:space-y-28">
             {/* 1. Hero Banner */}
             <HeroBanner
+              announcement={announcement}
+              onOpenOffers={() => setIsCouponsModalOpen(true)}
               onExplore={() => {
                 const el = document.getElementById('shop-by-category');
                 el?.scrollIntoView({ behavior: 'smooth' });
@@ -1332,6 +1374,20 @@ export default function App() {
         onApplyPromo={handleApplyPromo}
         onRemovePromo={handleRemovePromo}
         promoDiscount={promoDiscount}
+        coupons={coupons}
+      />
+
+      {/* Privilege Coupons & Special Offers Showcase Modal */}
+      <CouponsModal
+        isOpen={isCouponsModalOpen}
+        onClose={() => setIsCouponsModalOpen(false)}
+        coupons={coupons}
+        cartSubtotal={subtotal}
+        onApplyCoupon={async (code) => {
+          await handleApplyPromo(code);
+          setIsCouponsModalOpen(false);
+          setIsCartOpen(true);
+        }}
       />
 
       {/* Bespoke Multi-Step Checkout Modal */}

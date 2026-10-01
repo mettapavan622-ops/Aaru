@@ -1,5 +1,6 @@
 import React from 'react';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, Tag } from 'lucide-react';
+import { AnnouncementSettings } from '../types';
 
 interface HeroBannerProps {
   onExploreClick?: () => void;
@@ -10,6 +11,8 @@ interface HeroBannerProps {
   onCustomStudio?: () => void;
   onShopLookClick?: () => void;
   onSareesRTSClick?: () => void;
+  announcement?: AnnouncementSettings;
+  onOpenOffers?: () => void;
 }
 
 export const HeroBanner: React.FC<HeroBannerProps> = ({ 
@@ -17,7 +20,9 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   onStoryClick,
   onExplore,
   onShopNewArrivals,
-  onSixthElementStory 
+  onSixthElementStory,
+  announcement,
+  onOpenOffers
 }) => {
   const handleShopNewArrivals = () => {
     if (onExploreClick) onExploreClick();
@@ -49,6 +54,22 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
           
           {/* Left Hero Narrative */}
           <div className="lg:col-span-7 space-y-5 sm:space-y-6 text-left">
+            {/* Live Active Promotional Banner Strip if configured by Admin */}
+            {announcement && (announcement.saleHighlight || (announcement.isSaleActive && announcement.text)) && (
+              <div 
+                onClick={onOpenOffers}
+                className="inline-flex items-center gap-2.5 px-3 py-1.5 bg-[#0F4C5C]/10 border border-[#0F4C5C]/30 text-[#0F4C5C] text-xs font-semibold cursor-pointer hover:bg-[#0F4C5C]/15 transition-all shadow-2xs group"
+              >
+                <span className="w-2 h-2 rounded-full bg-[#C08081] animate-pulse" />
+                <span className="font-serif italic tracking-wide text-xs">
+                  {announcement.saleHighlight || announcement.text}
+                </span>
+                <span className="text-[10px] text-[#8C6D37] uppercase tracking-wider underline group-hover:text-[#0F4C5C] transition-colors ml-1">
+                  View Privileges →
+                </span>
+              </div>
+            )}
+
             {/* Eyebrow / Tagline */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#F5EFE6] border border-[#D4C7B5] text-[#8C6D37] rounded-none">
               <Sparkles className="w-3.5 h-3.5 text-[#8C6D37]" />

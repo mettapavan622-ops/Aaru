@@ -1,89 +1,108 @@
 import React from 'react';
-import { Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 interface FounderStorySectionProps {
   onDiscoverStory: () => void;
 }
 
+/**
+ * FounderStorySection:
+ * Editorial portrait & storytelling section inspired by the reference recording
+ * ("Tradition lives beautifully." / AARU by Moni).
+ */
 export const FounderStorySection: React.FC<FounderStorySectionProps> = ({ onDiscoverStory }) => {
   return (
-    <section id="aaru-by-moni" className="py-20 lg:py-28 bg-[#F5EFE6] relative overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="aaru-by-moni" className="relative w-full bg-[#FAF7F2] py-24 lg:py-32 overflow-hidden select-none border-b border-[#E8DFD5]">
+      {/* Background Subtle Accent */}
+      <div className="absolute top-0 right-0 w-1/3 h-1/2 bg-[#B49A62]/5 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-          {/* Atelier & Portrait Visual Composition */}
+          
+          {/* Left: Editorial Fashion Portrait Frame */}
           <div className="lg:col-span-6 relative">
-            <div className="relative aspect-[4/5] w-full max-w-lg mx-auto overflow-hidden bg-[#FAF7F2] border border-[#D4C7B5] shadow-xl">
-              <img
-                src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=1200&q=85"
-                alt="Moni, Founder & Master Couturier of AARU"
-                className="w-full h-full object-cover object-center"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#24211E]/80 via-transparent to-transparent" />
+            <div className="relative mx-auto max-w-md lg:max-w-none">
+              {/* Outer decorative gold hairline frame */}
+              <div className="absolute -inset-3.5 border border-[#B49A62]/30 pointer-events-none hidden sm:block" />
               
-              <div className="absolute bottom-6 left-6 right-6 text-white">
-                <span className="text-[10px] uppercase font-sans tracking-[0.25em] text-[#E0B0B1]">
-                  Founder & Creative Director
+              <div className="relative aspect-[4/5] overflow-hidden bg-[#0D261E] shadow-2xl border border-[#D4C7B5]">
+                <img
+                  src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=1200&q=85"
+                  alt="Moni, Founder & Creative Director of AARU"
+                  className="w-full h-full object-cover object-top filter brightness-95 hover:scale-[1.02] transition-transform duration-700"
+                  loading="lazy"
+                />
+                
+                {/* Bottom editorial gradient caption */}
+                <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-[#0D261E] via-[#0D261E]/60 to-transparent text-[#F5F0E7]">
+                  <span className="text-[10px] uppercase tracking-[0.25em] text-[#B49A62] font-serif block">
+                    Founder &amp; Creative Director
+                  </span>
+                  <p className="font-serif text-2xl font-normal mt-0.5 text-[#F5F0E7]">Moni</p>
+                  <p className="text-xs text-[#F5F0E7]/75 font-light italic mt-1">
+                    "Intuitive touch, ancient looms, modern sovereignty."
+                  </p>
+                </div>
+              </div>
+
+              {/* Atelier Rare Dexterity Stamp */}
+              <div className="absolute -bottom-6 -right-3 bg-[#0D261E] p-4 border border-[#B49A62]/40 shadow-xl max-w-[210px] hidden sm:block text-[#F5F0E7]">
+                <span className="text-[9px] uppercase tracking-[0.25em] text-[#B49A62] font-serif font-bold block mb-1">
+                  Tactile Mastery
                 </span>
-                <p className="font-serif text-2xl font-bold tracking-wide">Moni</p>
-                <p className="text-xs text-[#FAF7F2]/80 mt-0.5 font-light">
-                  "Intuitive touch, ancient looms, modern sovereignty."
+                <p className="text-[11px] text-[#F5F0E7]/80 leading-snug font-serif italic">
+                  Six fingers of intuitive grace guiding every thread of the warp and weft.
                 </p>
               </div>
             </div>
-
-            {/* Subtle Overlay Card: Tactile Mastery */}
-            <div className="absolute -bottom-6 -right-2 sm:right-6 bg-white p-5 shadow-xl border border-[#E8DFD5] max-w-[240px] hidden sm:block">
-              <div className="flex items-center gap-2 text-[#9C7C38] mb-1">
-                <Sparkles className="w-4 h-4" />
-                <span className="text-[10px] uppercase font-bold tracking-widest">Rare Dexterity</span>
-              </div>
-              <p className="text-xs text-[#5C5549] leading-snug font-serif italic">
-                Six fingers of intuitive grace guiding every thread of the warp and weft.
-              </p>
-            </div>
           </div>
 
-          {/* Narrative Editorial Column */}
-          <div className="lg:col-span-6 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#0F4C5C]/10 text-[#0F4C5C] text-[11px] font-semibold uppercase tracking-[0.2em]">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              The Founder’s Chronicle
+          {/* Right: Editorial Narrative Story */}
+          <div className="lg:col-span-6 space-y-6 lg:pl-6">
+            <div className="inline-flex items-center gap-3">
+              <span className="w-8 h-px bg-[#8C6D37]/50" />
+              <span className="text-[10px] sm:text-xs font-serif tracking-[0.3em] uppercase text-[#8C6D37] font-semibold">
+                Our Story
+              </span>
             </div>
 
-            <h2 className="font-serif text-3xl sm:text-5xl font-bold text-[#24211E] tracking-tight leading-[1.15]">
-              AARU by Moni
+            <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-normal text-[#1A2E26] tracking-tight leading-[1.12]">
+              Tradition lives <span className="italic font-light text-[#8C6D37]">beautifully</span>.
             </h2>
 
-            <p className="font-serif text-xl sm:text-2xl text-[#0F4C5C] italic font-normal">
-              “For our founder, every weave tells a story.”
+            <p className="font-serif text-xl sm:text-2xl text-[#0F4C5C] italic font-normal leading-relaxed">
+              “For our founder, every weave tells an unspoken story of strength.”
             </p>
 
             <div className="space-y-4 text-xs sm:text-sm text-[#5C5549] font-light leading-relaxed">
               <p>
-                With the rare gift of her six fingers, Moni possesses a heightened tactile sensitivity to textile tension, fiber purity, and structural drape. What began as a personal relationship with handlooms blossomed into AARU.
+                With the rare gift of her six fingers, Moni possesses a heightened tactile sensitivity to textile tension, fiber purity, and structural drape. What began as a personal reverence for Indian handlooms blossomed into AARU.
               </p>
               <p>
-                She transforms fabric into more than an outfit — into <strong className="font-semibold text-[#24211E]">grace, strength, and protection</strong>. From personally drafting temple borders in Kanchipuram to orchestrating the exact gauge of pure gold zari in Varanasi, each creation is an extension of maternal protection and artistic intuition.
+                Thoughtfully curated sarees, kurtas, and heirloom pieces — bringing India’s finest craftsmanship to your everyday. From personally drafting temple borders in Kanchipuram to orchestrating the gauge of pure gold zari in Varanasi, each piece is woven for tomorrow.
               </p>
-              <p className="font-serif text-base sm:text-lg text-[#24211E] font-medium italic pt-2">
+              <blockquote className="border-l-2 border-[#B49A62] pl-4 font-serif text-base sm:text-lg text-[#24211E] italic pt-1">
                 “Every piece is created to move with you, belong to you, and elevate you.”
-              </p>
+              </blockquote>
             </div>
 
-            <div className="pt-4 flex flex-wrap items-center gap-4">
+            <div className="pt-4">
               <button
                 id="discover-moni-story-btn"
                 type="button"
                 onClick={onDiscoverStory}
-                className="px-6 py-3 bg-[#0F4C5C] hover:bg-[#E8B4B8] hover:text-black border border-transparent hover:border-[#E8B4B8] text-white text-xs font-semibold uppercase tracking-[0.16em] flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                className="group px-8 py-3.5 bg-[#0F4C5C] hover:bg-[#09323c] text-[#FAF7F2] text-xs font-semibold tracking-[0.2em] uppercase transition-all duration-300 inline-flex items-center gap-3 cursor-pointer shadow-md"
               >
-                Discover the Story & Studio
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>Discover Our Story</span>
+                <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
               </button>
             </div>
           </div>
+
         </div>
       </div>
     </section>
   );
 };
+
+export default FounderStorySection;

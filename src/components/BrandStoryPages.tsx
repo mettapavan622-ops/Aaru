@@ -436,6 +436,16 @@ export const Footer: React.FC<{
                   Legal Compliance & GST
                 </button>
               </li>
+              <li className="pt-2 border-t border-[#262626]">
+                <button 
+                  type="button" 
+                  onClick={() => handleNav('admin-login')} 
+                  className="text-[#8C6D37] hover:text-[#FAF7F2] transition-colors cursor-pointer text-left inline-flex items-center gap-1.5 text-[11px] font-medium"
+                >
+                  <span>Atelier Admin Portal</span>
+                  <span className="text-[9px] px-1 py-0.5 bg-[#8C6D37]/20 border border-[#8C6D37]/40 text-[#8C6D37] uppercase font-mono tracking-wider">STAFF</span>
+                </button>
+              </li>
             </ul>
           </div>
         </div>

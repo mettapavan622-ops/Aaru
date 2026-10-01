@@ -114,7 +114,9 @@ export const CustomerAccessManagement: React.FC = () => {
 
       setNotification({
         type: 'success',
-        message: `Access status for ${user.email} updated to ${newStatus}.`
+        message: newStatus === 'ACTIVE'
+          ? `Status restored to ACTIVE for ${user.email}.`
+          : `Status set to ${newStatus} for ${user.email}.`
       });
       setActionTarget(null);
       fetchUsers();
@@ -503,68 +505,56 @@ export const CustomerAccessManagement: React.FC = () => {
 
                       {/* Access Controls Actions */}
                       <td className="py-3.5 px-4 text-right">
-                        <div className="inline-flex items-center justify-end gap-1.5">
-                          {/* Toggle Grant / Revoke / Suspend Access */}
-                          {user.status !== 'ACTIVE' ? (
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateStatus(user, 'ACTIVE')}
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1 shadow-2xs cursor-pointer transition-colors"
-                              title="Grant Full Active Access"
-                            >
-                              <Unlock className="w-3 h-3" />
-                              <span>Grant</span>
-                            </button>
-                          ) : !isRootAdmin ? (
-                            <div className="flex items-center gap-1">
+                        <div className="inline-flex items-center justify-end gap-2">
+                          {!isRootAdmin ? (
+                            <>
+                              {/* 1. SUSPEND: sends request to set status to suspended */}
                               <button
                                 type="button"
                                 onClick={() => handleUpdateStatus(user, 'SUSPENDED')}
-                                className="px-2 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-colors"
-                                title="Temporarily Suspend Account"
+                                className="px-2.5 py-1.5 bg-white hover:bg-amber-50 border border-[#F59E0B] text-[#B45309] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                                title="Set status to Suspended"
                               >
-                                <Lock className="w-3 h-3" />
-                                <span>Suspend</span>
+                                <Lock className="w-3.5 h-3.5 text-[#D97706]" />
+                                <span>SUSPEND</span>
                               </button>
+
+                              {/* 2. REVOKE: sends request to restore status to active */}
                               <button
                                 type="button"
-                                onClick={() => handleUpdateStatus(user, 'REVOKED')}
-                                className="px-2 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-800 text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-colors"
-                                title="Revoke Account Access"
+                                onClick={() => handleUpdateStatus(user, 'ACTIVE')}
+                                className="px-2.5 py-1.5 bg-white hover:bg-rose-50 border border-[#FDA4AF] text-[#9F1239] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                                title="Restore status to Active"
                               >
-                                <UserX className="w-3 h-3" />
-                                <span>Revoke</span>
+                                <UserX className="w-3.5 h-3.5 text-[#BE185D]" />
+                                <span>REVOKE</span>
                               </button>
-                            </div>
+
+                              {/* 3. MAKE ADMIN / MAKE USER TOGGLE: sends exact new role to backend */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const exactNewRole: 'USER' | 'ADMIN' = user.role === 'ADMIN' ? 'USER' : 'ADMIN';
+                                  handleUpdateRole(user, exactNewRole);
+                                }}
+                                className="px-3 py-1.5 bg-[#FAF7F2] hover:bg-[#F5EFE6] border border-[#D4C7B5] text-[#1E293B] text-[10px] font-bold uppercase tracking-wider cursor-pointer transition-colors shadow-2xs"
+                                title={`Set role to ${user.role === 'ADMIN' ? 'USER' : 'ADMIN'}`}
+                              >
+                                <span>{user.role === 'ADMIN' ? 'MAKE USER' : 'MAKE ADMIN'}</span>
+                              </button>
+
+                              {/* 4. Delete Account */}
+                              <button
+                                type="button"
+                                onClick={() => setActionTarget({ user, action: 'delete' })}
+                                className="p-1.5 text-gray-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                title="Delete account"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
                           ) : (
-                            <span className="text-[10px] text-[#8C6D37] italic">Protected</span>
-                          )}
-
-                          {/* Role Toggle (USER <-> ADMIN) */}
-                          {!isRootAdmin && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const nextRole = user.role === 'ADMIN' ? 'USER' : 'ADMIN';
-                                handleUpdateRole(user, nextRole);
-                              }}
-                              className="px-2 py-1 bg-[#FAF7F2] hover:bg-[#F5EFE6] border border-[#D4C7B5] text-[#24211E] text-[10px] font-semibold uppercase tracking-wider cursor-pointer transition-colors"
-                              title={`Change role to ${user.role === 'ADMIN' ? 'Standard User' : 'Administrator'}`}
-                            >
-                              {user.role === 'ADMIN' ? 'Make User' : 'Make Admin'}
-                            </button>
-                          )}
-
-                          {/* Delete Account */}
-                          {!isRootAdmin && (
-                            <button
-                              type="button"
-                              onClick={() => setActionTarget({ user, action: 'delete' })}
-                              className="p-1 text-gray-400 hover:text-rose-600 transition-colors cursor-pointer"
-                              title="Delete account"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <span className="text-xs text-[#8C6D37] italic pr-2">Protected</span>
                           )}
                         </div>
                       </td>

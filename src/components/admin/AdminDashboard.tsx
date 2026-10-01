@@ -204,9 +204,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setCouponFeedback(null);
 
     try {
+      const token = localStorage.getItem('aaru_auth_token');
       const res = await fetch('/api/coupons', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           code: cleanCode,
           discountPercent: Number(newDiscountPercent),
@@ -247,8 +251,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleToggleCoupon = async (code: string) => {
     try {
+      const token = localStorage.getItem('aaru_auth_token');
       const res = await fetch(`/api/coupons/${encodeURIComponent(code)}/toggle`, {
-        method: 'PATCH'
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
       });
       const data = await res.json();
       if (res.ok) {
@@ -268,8 +277,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!window.confirm(`Are you sure you want to delete coupon code '${code}'? Customers will no longer be able to use this code.`)) return;
 
     try {
+      const token = localStorage.getItem('aaru_auth_token');
       const res = await fetch(`/api/coupons/${encodeURIComponent(code)}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
       });
       if (res.ok) {
         setCouponsList(prev => prev.filter(c => c.code !== code));
@@ -381,13 +394,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleAnnouncementSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!announcementText.trim()) return;
     await onUpdateAnnouncement({
-      text: announcementText,
+      text: announcementText.trim(),
       isSaleActive,
-      saleHighlight
+      saleHighlight: saleHighlight.trim(),
+      isActive: true
     });
     setAnnouncementSuccess(true);
-    setTimeout(() => setAnnouncementSuccess(false), 2000);
+    // Instant form clear so the admin can immediately enter new data
+    setAnnouncementText('');
+    setSaleHighlight('');
+    setIsSaleActive(false);
+    setTimeout(() => setAnnouncementSuccess(false), 3000);
   };
 
   const handleStatusSubmit = async (e: React.FormEvent) => {

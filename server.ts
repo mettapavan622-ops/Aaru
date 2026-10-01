@@ -378,9 +378,9 @@ function profileToDbUser(profile: any, authUser: SupabaseUser): DbUser {
     email.split('@')[0] ||
     'Store Patron';
 
-  const roleUpper = String(profile?.role || authUser.app_metadata?.role || 'USER').toUpperCase();
+  const roleUpper = String(profile?.role || authUser.app_metadata?.role || authUser.user_metadata?.role || 'USER').toUpperCase();
   const role: UserRole = roleUpper === 'ADMIN' ? 'ADMIN' : 'USER';
-  const statusValue = String(profile?.status || 'ACTIVE').toUpperCase();
+  const statusValue = String(profile?.status || authUser.user_metadata?.status || 'ACTIVE').toUpperCase();
   const status: AccountStatus = ['ACTIVE', 'SUSPENDED', 'REVOKED'].includes(statusValue)
     ? (statusValue as AccountStatus)
     : 'ACTIVE';
@@ -452,24 +452,29 @@ export async function getAuthenticatedUserFromRequest(req: Request): Promise<DbU
     // The trigger normally creates this row. If an existing Supabase user was
     // created before the migration, create it on first authenticated request.
     if (!profile && supabaseAdminClient) {
-      const fallbackName =
-        authUser.user_metadata?.name ||
-        authUser.user_metadata?.display_name ||
-        authUser.email.split('@')[0] ||
-        'Store Patron';
-      const { data: createdProfile } = await supabaseAdminClient
-        .from('profiles')
-        .upsert({
-          id: authUser.id,
-          email: authUser.email.toLowerCase().trim(),
-          name: fallbackName,
-          phone: authUser.user_metadata?.phone || '',
-          role: authUser.email.toLowerCase().trim() === 'aarubymoni@admin.co.in' ? 'ADMIN' : 'USER',
-          status: 'ACTIVE'
-        }, { onConflict: 'id' })
-        .select('*')
-        .single();
-      profile = createdProfile || null;
+      try {
+        const fallbackName =
+          authUser.user_metadata?.name ||
+          authUser.user_metadata?.display_name ||
+          authUser.email.split('@')[0] ||
+          'Store Patron';
+        const roleFromMeta = String(authUser.app_metadata?.role || authUser.user_metadata?.role || '').toUpperCase();
+        const { data: createdProfile } = await supabaseAdminClient
+          .from('profiles')
+          .upsert({
+            id: authUser.id,
+            email: authUser.email.toLowerCase().trim(),
+            name: fallbackName,
+            phone: authUser.user_metadata?.phone || '',
+            role: roleFromMeta === 'ADMIN' || authUser.email.toLowerCase().trim() === 'aarubymoni@admin.co.in' ? 'ADMIN' : 'USER',
+            status: authUser.user_metadata?.status || 'ACTIVE'
+          }, { onConflict: 'id' })
+          .select('*')
+          .maybeSingle();
+        profile = createdProfile || null;
+      } catch {
+        // profiles table is optional
+      }
     }
 
     // Root administrator remains compatible with the existing admin account.
@@ -1111,7 +1116,8 @@ async function startServer() {
   const updateAnnouncementHandler = (req: Request, res: Response) => {
     announcement = {
       ...announcement,
-      ...req.body
+      ...req.body,
+      isActive: req.body.isActive !== undefined ? Boolean(req.body.isActive) : true
     };
     broadcastCatalogUpdate({ type: 'ANNOUNCEMENT_UPDATED', announcement });
     res.json(announcement);
@@ -1214,6 +1220,21 @@ async function startServer() {
     res.json({ success: true, coupon: coupons[index] });
   });
 
+  // 4b. Toggle coupon active status (Admin)
+  app.patch('/api/coupons/:code/toggle', requireAdminAuth, (req: Request, res: Response) => {
+    const { code } = req.params;
+    const cleanCode = code.trim().toUpperCase();
+    const index = coupons.findIndex(c => c.code.toUpperCase() === cleanCode);
+
+    if (index === -1) {
+      return res.status(404).json({ error: `Coupon code '${cleanCode}' not found.` });
+    }
+
+    coupons[index].isActive = !coupons[index].isActive;
+    broadcastCatalogUpdate({ type: 'COUPON_UPDATED', coupon: coupons[index] });
+    res.json({ success: true, coupon: coupons[index] });
+  });
+
   // 5. Delete coupon (Admin)
   app.delete('/api/coupons/:code', requireAdminAuth, (req: Request, res: Response) => {
     const { code } = req.params;
@@ -1225,6 +1246,7 @@ async function startServer() {
       return res.status(404).json({ error: `Coupon code '${cleanCode}' not found.` });
     }
 
+    broadcastCatalogUpdate({ type: 'COUPON_DELETED', code: cleanCode });
     res.json({ success: true, message: `Coupon code '${cleanCode}' removed.` });
   });
 
@@ -2620,12 +2642,12 @@ async function startServer() {
   // ===========================================================================
   // DEDICATED ADMIN LOGIN ENDPOINT: POST /api/admin/login
   // Strict security:
-  // - Verifies email and bcrypt password
-  // - Verifies user role is strictly ADMIN
-  // - If invalid or standard USER: returns generic 401 error without leaking existence
+  // - Verifies user exists in PostgreSQL / Supabase / in-memory store
+  // - Verifies password
+  // - Strictly verifies user role is 'ADMIN'. Standard users must be actively blocked!
   // - On success: returns session token and directs frontend to /admin/dashboard
   // ===========================================================================
-  app.post('/api/admin/login', rateLimit('admin-login', 8, 15 * 60 * 1000), (req: Request, res: Response) => {
+  app.post('/api/admin/login', rateLimit('admin-login', 8, 15 * 60 * 1000), async (req: Request, res: Response) => {
     try {
       const { email, username, password } = req.body;
       const rawIdentifier = email || username;
@@ -2637,34 +2659,112 @@ async function startServer() {
         containsHarmfulMarkup(rawIdentifier) || 
         containsHarmfulMarkup(password)
       ) {
-        // Generic error without exposing details
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
       // 2. Sanitize identifier
-      const cleanEmail = sanitizeAuthInput(rawIdentifier).toLowerCase();
+      const cleanEmail = sanitizeAuthInput(rawIdentifier).toLowerCase().trim();
+
+      // Check against Supabase PostgreSQL database first if configured
+      if (supabaseAdminClient) {
+        try {
+          const { data: listData } = await supabaseAdminClient.auth.admin.listUsers();
+          const supabaseUser = (listData?.users || []).find((u: any) => u.email?.toLowerCase().trim() === cleanEmail);
+
+          if (supabaseUser) {
+            const roleMeta = String(supabaseUser.app_metadata?.role || supabaseUser.user_metadata?.role || '').toUpperCase();
+            
+            // Authenticate password with Supabase client
+            if (supabaseAuthClient) {
+              const { data: signInData, error: signInError } = await supabaseAuthClient.auth.signInWithPassword({
+                email: cleanEmail,
+                password
+              });
+
+              if (!signInError && signInData?.user) {
+                // User password is VALID. Now strictly check role:
+                // Standard users must be actively blocked from logging into the admin portal!
+                if (roleMeta !== 'ADMIN') {
+                  return res.status(403).json({ 
+                    error: 'Access denied: Standard user accounts cannot log in to the administrative portal.' 
+                  });
+                }
+
+                const status = String(supabaseUser.user_metadata?.status || 'ACTIVE').toUpperCase();
+                if (status === 'REVOKED' || status === 'SUSPENDED') {
+                  return res.status(403).json({ 
+                    error: 'Administrator access for this account has been suspended or revoked.' 
+                  });
+                }
+
+                const adminName = supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.display_name || cleanEmail.split('@')[0];
+                const adminUser: DbUser = {
+                  id: supabaseUser.id,
+                  email: cleanEmail,
+                  name: adminName,
+                  phone: supabaseUser.user_metadata?.phone || '',
+                  passwordHash: hashPassword(password),
+                  role: 'ADMIN',
+                  status: 'ACTIVE',
+                  createdAt: supabaseUser.created_at || new Date().toISOString(),
+                  lastLoginAt: new Date().toISOString(),
+                  cart: [],
+                  wishlist: []
+                };
+                usersDatabase.set(cleanEmail, adminUser);
+
+                const sessionToken = createSessionToken({ id: adminUser.id, email: adminUser.email, role: 'ADMIN' });
+                res.cookie('aaru_session', sessionToken, { 
+                  httpOnly: true, 
+                  secure: process.env.NODE_ENV === 'production', 
+                  sameSite: 'lax',
+                  maxAge: 30 * 24 * 60 * 60 * 1000 
+                });
+
+                return res.json({
+                  success: true,
+                  message: `Welcome Atelier Director ${adminUser.name}! Administrator session authenticated.`,
+                  token: sessionToken,
+                  redirectTo: '/admin/dashboard',
+                  user: {
+                    id: adminUser.id,
+                    email: adminUser.email,
+                    name: adminUser.name,
+                    phone: adminUser.phone || '',
+                    role: 'ADMIN',
+                    status: adminUser.status
+                  }
+                });
+              }
+            }
+          }
+        } catch (sbErr) {
+          console.warn('[Admin Login] Supabase verification notice:', sbErr);
+        }
+      }
+
+      // Check in-memory database store
       const user = usersDatabase.get(cleanEmail);
 
-      // Generic authentication failure: do NOT leak whether user exists
       if (!user) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
-      // 3. Verify bcrypt password
+      // Verify bcrypt password
       const isValidPassword = verifyPassword(password, user.passwordHash);
       if (!isValidPassword) {
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
-      // 4. Strict Role Verification: Must be ADMIN
-      // If user is a normal USER, do NOT allow admin login.
-      // Return generic 401 error without leaking role or privileges
+      // Strict Role Verification: Must be ADMIN. Standard users must be actively blocked!
       const roleUpper = (user.role || '').toUpperCase();
       if (roleUpper !== 'ADMIN') {
-        return res.status(401).json({ error: 'Invalid email or password' });
+        return res.status(403).json({ 
+          error: 'Access denied: Standard user accounts cannot log in to the administrative portal.' 
+        });
       }
 
-      // 5. Verify account is not suspended or revoked
+      // Verify account is not suspended or revoked
       if (user.status === 'REVOKED' || user.status === 'SUSPENDED') {
         return res.status(403).json({ 
           error: 'Administrator access for this account has been suspended or revoked.' 
@@ -2744,54 +2844,98 @@ async function startServer() {
   // 1. List all accounts with order counts and access status
   app.get('/api/admin/users', async (req: Request, res: Response) => {
     try {
-      if (supabaseAdminClient) {
-        const { data: profiles, error } = await supabaseAdminClient
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (error) throw error;
+      const userMap = new Map<string, any>();
 
-        const userList = (profiles || []).map((u: any) => {
-          const normalizedEmail = String(u.email || '').toLowerCase().trim();
+      // 1. Primary permanent store: Supabase PostgreSQL auth.users
+      if (supabaseAdminClient) {
+        try {
+          const { data: authData, error: authError } = await supabaseAdminClient.auth.admin.listUsers();
+          if (!authError && Array.isArray(authData?.users)) {
+            for (const u of authData.users) {
+              const email = String(u.email || '').toLowerCase().trim();
+              if (!email) continue;
+              const roleMeta = String(u.app_metadata?.role || u.user_metadata?.role || '').toUpperCase();
+              const role = roleMeta === 'ADMIN' || email === 'aarubymoni@admin.co.in' ? 'ADMIN' : 'USER';
+              const name = u.user_metadata?.name || u.user_metadata?.display_name || email.split('@')[0];
+              const phone = u.user_metadata?.phone || u.phone || '';
+              const status = String(u.user_metadata?.status || 'ACTIVE').toUpperCase();
+              const userOrders = orders.filter(
+                o => o.userId === u.id || o.customerEmail?.toLowerCase().trim() === email
+              );
+              userMap.set(email, {
+                id: u.id,
+                email: u.email,
+                name,
+                phone,
+                role,
+                status: ['ACTIVE', 'SUSPENDED', 'REVOKED'].includes(status) ? status : 'ACTIVE',
+                createdAt: u.created_at || new Date().toISOString(),
+                lastLoginAt: u.last_sign_in_at || undefined,
+                ordersCount: userOrders.length,
+                totalSpend: userOrders.reduce((sum, o) => sum + (o.total || 0), 0)
+              });
+            }
+          }
+        } catch (supabaseErr) {
+          console.warn('[Admin Users] Supabase auth list notice:', supabaseErr);
+        }
+
+        // Try hydrating extra fields from profiles table if present
+        try {
+          const { data: profiles } = await supabaseAdminClient
+            .from('profiles')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (Array.isArray(profiles)) {
+            for (const p of profiles) {
+              const email = String(p.email || '').toLowerCase().trim();
+              if (!email) continue;
+              const existing = userMap.get(email);
+              const userOrders = orders.filter(
+                o => o.userId === p.id || o.customerEmail?.toLowerCase().trim() === email
+              );
+              userMap.set(email, {
+                id: p.id || existing?.id || `usr-${Date.now()}`,
+                email: p.email,
+                name: p.name || existing?.name || email.split('@')[0],
+                phone: p.phone || existing?.phone || '',
+                role: String(p.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : (existing?.role || 'USER'),
+                status: p.status || existing?.status || 'ACTIVE',
+                createdAt: p.created_at || existing?.createdAt || new Date().toISOString(),
+                lastLoginAt: p.last_login_at || existing?.lastLoginAt,
+                ordersCount: userOrders.length,
+                totalSpend: userOrders.reduce((sum, o) => sum + (o.total || 0), 0)
+              });
+            }
+          }
+        } catch {
+          // profiles table is optional
+        }
+      }
+
+      // 2. Merge local / seed database users
+      for (const u of usersDatabase.values()) {
+        const email = u.email.toLowerCase().trim();
+        if (!userMap.has(email)) {
           const userOrders = orders.filter(
-            o => o.userId === u.id || o.customerEmail?.toLowerCase().trim() === normalizedEmail
+            o => o.userId === u.id || o.customerEmail?.toLowerCase().trim() === email
           );
-          return {
+          userMap.set(email, {
             id: u.id,
             email: u.email,
             name: u.name,
             phone: u.phone || '',
             role: String(u.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER',
             status: u.status || 'ACTIVE',
-            createdAt: u.created_at,
-            lastLoginAt: u.last_login_at,
+            createdAt: u.createdAt,
+            lastLoginAt: u.lastLoginAt,
             ordersCount: userOrders.length,
             totalSpend: userOrders.reduce((sum, o) => sum + (o.total || 0), 0)
-          };
-        });
-        return res.json(userList);
+          });
+        }
       }
 
-      // Development/legacy fallback when the server-side Supabase key has not
-      // been configured yet.
-      const userList = Array.from(usersDatabase.values()).map(u => {
-        const normalizedEmail = u.email.toLowerCase().trim();
-        const userOrders = orders.filter(
-          o => o.userId === u.id || o.customerEmail?.toLowerCase().trim() === normalizedEmail
-        );
-        return {
-          id: u.id,
-          email: u.email,
-          name: u.name,
-          phone: u.phone || '',
-          role: String(u.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER',
-          status: u.status || 'ACTIVE',
-          createdAt: u.createdAt,
-          lastLoginAt: u.lastLoginAt,
-          ordersCount: userOrders.length,
-          totalSpend: userOrders.reduce((sum, o) => sum + (o.total || 0), 0)
-        };
-      });
+      const userList = Array.from(userMap.values());
       return res.json(userList);
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Failed to load user directory.' });
@@ -2802,58 +2946,74 @@ async function startServer() {
   app.patch('/api/admin/users/:id/status', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { status } = req.body;
-      const allowedStatuses: AccountStatus[] = ['ACTIVE', 'SUSPENDED', 'REVOKED'];
-      if (!status || !allowedStatuses.includes(status)) {
+      const rawStatus = String(req.body.status || '').toUpperCase().trim();
+      let status: AccountStatus;
+      if (rawStatus === 'SUSPENDED') {
+        status = 'SUSPENDED';
+      } else if (rawStatus === 'REVOKED') {
+        status = 'REVOKED';
+      } else if (rawStatus === 'ACTIVE' || rawStatus === 'RESTORE' || rawStatus === 'RESTORED' || rawStatus === 'GRANT') {
+        status = 'ACTIVE';
+      } else {
         return res.status(400).json({ error: 'Invalid status. Permitted values: ACTIVE, SUSPENDED, REVOKED.' });
       }
 
+      let userEmail = '';
+      let targetId = id;
+      let userName = 'User';
+
       if (supabaseAdminClient) {
-        let { data: targetUser, error: lookupError } = await supabaseAdminClient
-          .from('profiles').select('*').eq('id', id).maybeSingle();
-        if (!targetUser && !lookupError) {
-          const byEmail = await supabaseAdminClient.from('profiles').select('*').eq('email', id.toLowerCase()).maybeSingle();
-          targetUser = byEmail.data;
-          lookupError = byEmail.error;
-        }
-        if (lookupError) throw lookupError;
-        if (!targetUser) return res.status(404).json({ error: 'User account not found.' });
+        try {
+          const { data: listData } = await supabaseAdminClient.auth.admin.listUsers();
+          const found = (listData?.users || []).find((u: any) => u.id === id || u.email?.toLowerCase().trim() === id.toLowerCase());
+          if (found) {
+            targetId = found.id;
+            userEmail = String(found.email).toLowerCase().trim();
+            userName = found.user_metadata?.name || userEmail.split('@')[0];
 
-        if (String(targetUser.email).toLowerCase() === 'aarubymoni@admin.co.in' && status !== 'ACTIVE') {
-          return res.status(403).json({ error: 'Cannot suspend or revoke root administrator account.' });
-        }
+            if (userEmail === 'aarubymoni@admin.co.in' && status !== 'ACTIVE') {
+              return res.status(403).json({ error: 'Cannot suspend or revoke root administrator account.' });
+            }
 
-        const { data: updated, error } = await supabaseAdminClient
-          .from('profiles')
-          .update({ status, updated_at: new Date().toISOString() })
-          .eq('id', targetUser.id)
-          .select('*').single();
-        if (error) throw error;
-
-        const cached = usersDatabase.get(String(updated.email).toLowerCase());
-        if (cached) cached.status = status;
-
-        return res.json({
-          success: true,
-          message: `Account access for ${updated.email} is now ${status}.`,
-          user: {
-            id: updated.id, email: updated.email, name: updated.name,
-            role: String(updated.role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER',
-            status: updated.status
+            await supabaseAdminClient.auth.admin.updateUserById(targetId, {
+              user_metadata: { ...found.user_metadata, status },
+              app_metadata: { ...found.app_metadata, status }
+            });
           }
-        });
+        } catch (sbErr) {
+          console.warn('[Admin Status] Supabase auth update notice:', sbErr);
+        }
+
+        // Try updating profiles table safely
+        try {
+          await supabaseAdminClient
+            .from('profiles')
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq('id', targetId);
+        } catch {
+          // profiles table is optional
+        }
       }
 
-      let targetUser: DbUser | undefined;
-      for (const u of usersDatabase.values()) {
-        if (u.id === id || u.email.toLowerCase() === id.toLowerCase()) { targetUser = u; break; }
+      // Update in-memory database
+      for (const [emailKey, u] of usersDatabase.entries()) {
+        if (u.id === targetId || emailKey === id.toLowerCase() || emailKey === userEmail) {
+          u.status = status;
+          userEmail = u.email;
+          userName = u.name;
+          break;
+        }
       }
-      if (!targetUser) return res.status(404).json({ error: 'User account not found.' });
-      if (targetUser.email === 'aarubymoni@admin.co.in' && status !== 'ACTIVE') {
-        return res.status(403).json({ error: 'Cannot suspend or revoke root administrator account.' });
+
+      if (!userEmail) {
+        userEmail = id;
       }
-      targetUser.status = status;
-      return res.json({ success: true, message: `Account access for ${targetUser.email} is now ${status}.`, user: targetUser });
+
+      return res.json({
+        success: true,
+        message: `Account access for ${userEmail} is now ${status}.`,
+        user: { id: targetId, email: userEmail, name: userName, status }
+      });
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Failed to update account status.' });
     }
@@ -2868,55 +3028,60 @@ async function startServer() {
         return res.status(400).json({ error: 'Role must be either USER or ADMIN.' });
       }
 
+      let userEmail = '';
+      let targetId = id;
+      let userName = 'User';
+
       if (supabaseAdminClient) {
-        let { data: targetUser, error: lookupError } = await supabaseAdminClient
-          .from('profiles').select('*').eq('id', id).maybeSingle();
-        if (!targetUser && !lookupError) {
-          const byEmail = await supabaseAdminClient.from('profiles').select('*').eq('email', id.toLowerCase()).maybeSingle();
-          targetUser = byEmail.data;
-          lookupError = byEmail.error;
-        }
-        if (lookupError) throw lookupError;
-        if (!targetUser) return res.status(404).json({ error: 'User account not found.' });
-        if (String(targetUser.email).toLowerCase() === 'aarubymoni@admin.co.in' && roleUpper !== 'ADMIN') {
-          return res.status(403).json({ error: 'Cannot demote the primary root administrator.' });
-        }
+        try {
+          const { data: listData } = await supabaseAdminClient.auth.admin.listUsers();
+          const found = (listData?.users || []).find((u: any) => u.id === id || u.email?.toLowerCase().trim() === id.toLowerCase());
+          if (found) {
+            targetId = found.id;
+            userEmail = String(found.email).toLowerCase().trim();
+            userName = found.user_metadata?.name || userEmail.split('@')[0];
 
-        const { data: updated, error } = await supabaseAdminClient
-          .from('profiles')
-          .update({ role: roleUpper, updated_at: new Date().toISOString() })
-          .eq('id', targetUser.id)
-          .select('*').single();
-        if (error) throw error;
+            if (userEmail === 'aarubymoni@admin.co.in' && roleUpper !== 'ADMIN') {
+              return res.status(403).json({ error: 'Cannot demote the primary root administrator.' });
+            }
 
-        // Keep Supabase app_metadata authoritative for server/client role checks.
-        await supabaseAdminClient.auth.admin.updateUserById(targetUser.id, {
-          app_metadata: { role: roleUpper }
-        });
-
-        const cached = usersDatabase.get(String(updated.email).toLowerCase());
-        if (cached) cached.role = roleUpper as UserRole;
-
-        return res.json({
-          success: true,
-          message: `Account role for ${updated.email} updated to ${roleUpper}.`,
-          user: {
-            id: updated.id, email: updated.email, name: updated.name,
-            role: roleUpper, status: updated.status
+            await supabaseAdminClient.auth.admin.updateUserById(targetId, {
+              user_metadata: { ...found.user_metadata, role: roleUpper },
+              app_metadata: { ...found.app_metadata, role: roleUpper }
+            });
           }
-        });
+        } catch (sbErr) {
+          console.warn('[Admin Role] Supabase auth update notice:', sbErr);
+        }
+
+        // Try updating profiles table safely
+        try {
+          await supabaseAdminClient
+            .from('profiles')
+            .update({ role: roleUpper, updated_at: new Date().toISOString() })
+            .eq('id', targetId);
+        } catch {
+          // profiles table is optional
+        }
       }
 
-      let targetUser: DbUser | undefined;
-      for (const u of usersDatabase.values()) {
-        if (u.id === id || u.email.toLowerCase() === id.toLowerCase()) { targetUser = u; break; }
+      // Update in-memory database
+      for (const [emailKey, u] of usersDatabase.entries()) {
+        if (u.id === targetId || emailKey === id.toLowerCase() || emailKey === userEmail) {
+          u.role = roleUpper as UserRole;
+          userEmail = u.email;
+          userName = u.name;
+          break;
+        }
       }
-      if (!targetUser) return res.status(404).json({ error: 'User account not found.' });
-      if (targetUser.email === 'aarubymoni@admin.co.in' && roleUpper !== 'ADMIN') {
-        return res.status(403).json({ error: 'Cannot demote the primary root administrator.' });
-      }
-      targetUser.role = roleUpper as UserRole;
-      return res.json({ success: true, message: `Account role for ${targetUser.email} updated to ${roleUpper}.`, user: targetUser });
+
+      if (!userEmail) userEmail = id;
+
+      return res.json({
+        success: true,
+        message: `Account role for ${userEmail} updated to ${roleUpper}.`,
+        user: { id: targetId, email: userEmail, name: userName, role: roleUpper }
+      });
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Failed to update user role.' });
     }
@@ -2930,66 +3095,109 @@ async function startServer() {
         return res.status(400).json({ error: 'Email, Full Name, and Password are required.' });
       }
 
-      const cleanEmail = sanitizeAuthInput(email).toLowerCase();
+      const cleanEmail = sanitizeAuthInput(email).toLowerCase().trim();
       if (!validateEmailFormat(cleanEmail)) {
         return res.status(400).json({ error: 'Invalid email address format.' });
       }
       const roleUpper: UserRole = String(role).toUpperCase() === 'ADMIN' ? 'ADMIN' : 'USER';
       const statusValue: AccountStatus = ['ACTIVE', 'SUSPENDED', 'REVOKED'].includes(status) ? status : 'ACTIVE';
+      const cleanName = sanitizeAuthInput(name);
+      const cleanPhone = sanitizeAuthInput(phone) || '';
+
+      let createdId = `usr-${Date.now()}`;
 
       if (supabaseAdminClient) {
-        const { data: created, error: authError } = await supabaseAdminClient.auth.admin.createUser({
-          email: cleanEmail,
-          password,
-          email_confirm: true,
-          user_metadata: {
-            name: sanitizeAuthInput(name),
-            display_name: sanitizeAuthInput(name),
-            phone: sanitizeAuthInput(phone) || ''
-          },
-          app_metadata: { role: roleUpper }
-        });
-        if (authError || !created.user) {
-          return res.status(409).json({ error: authError?.message || 'Unable to create authentication account.' });
-        }
+        // Check if user already exists in Supabase
+        const { data: listData } = await supabaseAdminClient.auth.admin.listUsers();
+        const existing = (listData?.users || []).find((u: any) => u.email?.toLowerCase().trim() === cleanEmail);
 
-        const { data: profile, error: profileError } = await supabaseAdminClient
-          .from('profiles')
-          .upsert({
-            id: created.user.id,
+        if (existing) {
+          createdId = existing.id;
+          await supabaseAdminClient.auth.admin.updateUserById(existing.id, {
+            password,
+            email_confirm: true,
+            user_metadata: {
+              name: cleanName,
+              display_name: cleanName,
+              phone: cleanPhone,
+              role: roleUpper,
+              status: statusValue
+            },
+            app_metadata: {
+              role: roleUpper,
+              status: statusValue
+            }
+          });
+        } else {
+          const { data: created, error: authError } = await supabaseAdminClient.auth.admin.createUser({
             email: cleanEmail,
-            name: sanitizeAuthInput(name),
-            phone: sanitizeAuthInput(phone) || '',
-            role: roleUpper,
-            status: statusValue
-          }, { onConflict: 'id' })
-          .select('*').single();
-        if (profileError) {
-          await supabaseAdminClient.auth.admin.deleteUser(created.user.id);
-          throw profileError;
+            password,
+            email_confirm: true,
+            user_metadata: {
+              name: cleanName,
+              display_name: cleanName,
+              phone: cleanPhone,
+              role: roleUpper,
+              status: statusValue
+            },
+            app_metadata: {
+              role: roleUpper,
+              status: statusValue
+            }
+          });
+
+          if (authError || !created?.user) {
+            return res.status(400).json({ error: authError?.message || 'Unable to create user in authentication database.' });
+          }
+          createdId = created.user.id;
         }
 
-        return res.status(201).json({
-          success: true,
-          message: `Account created for ${profile.name} with role ${roleUpper}.`,
-          user: {
-            id: profile.id, email: profile.email, name: profile.name,
-            phone: profile.phone || '', role: roleUpper, status: statusValue,
-            createdAt: profile.created_at
-          }
-        });
+        // Safely update profiles table without throwing or deleting the user if table is absent
+        try {
+          await supabaseAdminClient
+            .from('profiles')
+            .upsert({
+              id: createdId,
+              email: cleanEmail,
+              name: cleanName,
+              phone: cleanPhone,
+              role: roleUpper,
+              status: statusValue,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'id' });
+        } catch {
+          // profiles table is optional
+        }
       }
 
-      if (usersDatabase.has(cleanEmail)) {
-        return res.status(409).json({ error: 'An account with this email address already exists.' });
-      }
+      // Update in-memory database store
       const newUser: DbUser = {
-        id: `usr-${Date.now()}`, email: cleanEmail, name: sanitizeAuthInput(name),
-        phone: sanitizeAuthInput(phone) || '', passwordHash: hashPassword(password),
-        role: roleUpper, status: statusValue, createdAt: new Date().toISOString(), cart: [], wishlist: []
+        id: createdId,
+        email: cleanEmail,
+        name: cleanName,
+        phone: cleanPhone,
+        passwordHash: hashPassword(password),
+        role: roleUpper,
+        status: statusValue,
+        createdAt: new Date().toISOString(),
+        cart: [],
+        wishlist: []
       };
       usersDatabase.set(cleanEmail, newUser);
-      return res.status(201).json({ success: true, message: `Account created for ${newUser.name}.`, user: newUser });
+
+      return res.status(201).json({
+        success: true,
+        message: `Account created successfully for ${cleanName} with role ${roleUpper}.`,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+          phone: newUser.phone,
+          role: newUser.role,
+          status: newUser.status,
+          createdAt: newUser.createdAt
+        }
+      });
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Failed to create user account.' });
     }
@@ -3001,34 +3209,42 @@ async function startServer() {
       const { id } = req.params;
 
       if (supabaseAdminClient) {
-        let { data: targetUser, error: lookupError } = await supabaseAdminClient
-          .from('profiles').select('*').eq('id', id).maybeSingle();
-        if (!targetUser && !lookupError) {
-          const byEmail = await supabaseAdminClient.from('profiles').select('*').eq('email', id.toLowerCase()).maybeSingle();
-          targetUser = byEmail.data;
-          lookupError = byEmail.error;
-        }
-        if (lookupError) throw lookupError;
-        if (!targetUser) return res.status(404).json({ error: 'User account not found.' });
-        if (String(targetUser.email).toLowerCase() === 'aarubymoni@admin.co.in') {
-          return res.status(403).json({ error: 'Cannot delete root administrator account.' });
+        try {
+          const { data: listData } = await supabaseAdminClient.auth.admin.listUsers();
+          const found = (listData?.users || []).find((u: any) => u.id === id || u.email?.toLowerCase().trim() === id.toLowerCase());
+          if (found) {
+            if (String(found.email).toLowerCase() === 'aarubymoni@admin.co.in') {
+              return res.status(403).json({ error: 'Cannot delete root administrator account.' });
+            }
+            await supabaseAdminClient.auth.admin.deleteUser(found.id);
+            usersDatabase.delete(String(found.email).toLowerCase());
+          }
+        } catch (sbErr) {
+          console.warn('[Admin Delete] Supabase auth delete notice:', sbErr);
         }
 
-        const { error: deleteError } = await supabaseAdminClient.auth.admin.deleteUser(targetUser.id);
-        if (deleteError) throw deleteError;
-        usersDatabase.delete(String(targetUser.email).toLowerCase());
-        return res.json({ success: true, message: `Account ${targetUser.email} has been removed.` });
+        try {
+          await supabaseAdminClient.from('profiles').delete().eq('id', id);
+        } catch {
+          // profiles table is optional
+        }
       }
 
       let targetKey: string | undefined;
-      let targetUser: DbUser | undefined;
-      for (const [email, u] of usersDatabase.entries()) {
-        if (u.id === id || u.email.toLowerCase() === id.toLowerCase()) { targetKey = email; targetUser = u; break; }
+      for (const [emailKey, u] of usersDatabase.entries()) {
+        if (u.id === id || emailKey === id.toLowerCase()) {
+          targetKey = emailKey;
+          break;
+        }
       }
-      if (!targetUser || !targetKey) return res.status(404).json({ error: 'User account not found.' });
-      if (targetUser.email === 'aarubymoni@admin.co.in') return res.status(403).json({ error: 'Cannot delete root administrator account.' });
-      usersDatabase.delete(targetKey);
-      return res.json({ success: true, message: `Account ${targetUser.email} has been removed.` });
+      if (targetKey) {
+        if (targetKey === 'aarubymoni@admin.co.in') {
+          return res.status(403).json({ error: 'Cannot delete root administrator account.' });
+        }
+        usersDatabase.delete(targetKey);
+      }
+
+      return res.json({ success: true, message: `Account has been removed successfully.` });
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Failed to delete account.' });
     }

@@ -55,6 +55,14 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok || !data.success) {
+          if (response.status === 403 || data.error?.toLowerCase().includes('access denied')) {
+            setErrorMessage(data.error || 'Access denied: Standard user accounts cannot access the administrative portal.');
+            return;
+          }
+          if (supabaseError?.message?.includes('Invalid administrator') || supabaseError?.message?.includes('admin')) {
+            setErrorMessage('Access denied: Standard user accounts cannot access the administrative portal.');
+            return;
+          }
           const friendly = parseSupabaseAuthError(supabaseError);
           setErrorMessage(data.error || (friendly === 'Incorrect email or password. Please check your credentials and try again.'
             ? 'Invalid administrator email or password.'
