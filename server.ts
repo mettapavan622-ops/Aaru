@@ -1110,6 +1110,16 @@ async function startServer() {
 
   // Announcement & Sale Alerts
   app.get('/api/cms/announcement', (req: Request, res: Response) => {
+    try {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.json(announcement);
+    } catch {
+      res.status(500).json({ error: 'Failed to retrieve announcement' });
+    }
+  });
+
+  app.get('/api/announcement', (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.json(announcement);
   });
 
@@ -1130,9 +1140,14 @@ async function startServer() {
   // Privilege Coupons & Promotional Codes Engine (Admin & Checkout)
   // =========================================================================
 
-  // 1. Get all coupons (Admin)
+  // 1. Get all coupons (Admin & Storefront)
   app.get('/api/coupons', (req: Request, res: Response) => {
-    res.json(coupons);
+    try {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.json(coupons);
+    } catch {
+      res.status(500).json({ error: 'Failed to retrieve coupons' });
+    }
   });
 
   // 2. Create coupon (Admin)

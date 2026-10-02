@@ -16,7 +16,8 @@ import {
   categories as defaultCategories, 
   collections as defaultCollections, 
   defaultAnnouncement, 
-  sampleOrders 
+  sampleOrders,
+  INITIAL_COUPONS 
 } from './data/mockData';
 
 // Component imports
@@ -261,7 +262,7 @@ export default function App() {
   // Promo Code State
   const [appliedPromo, setAppliedPromo] = useState('');
   const [promoDiscount, setPromoDiscount] = useState(0);
-  const [coupons, setCoupons] = useState<PromoCode[]>([]);
+  const [coupons, setCoupons] = useState<PromoCode[]>(INITIAL_COUPONS);
   const [isCouponsModalOpen, setIsCouponsModalOpen] = useState(false);
 
   // Real-Time Live Notification Toast
@@ -270,24 +271,28 @@ export default function App() {
   const fetchAnnouncement = async () => {
     try {
       const res = await fetch('/api/cms/announcement');
-      const data = await res.json();
-      if (data && (data.text || data.saleHighlight)) {
-        setAnnouncement(data);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && (data.text || data.saleHighlight)) {
+          setAnnouncement(data);
+        }
       }
-    } catch (err) {
-      console.error('Failed to load announcement from API:', err);
+    } catch {
+      // Fallback silently to initial announcement
     }
   };
 
   const fetchCoupons = async () => {
     try {
       const res = await fetch('/api/coupons');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setCoupons(data);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setCoupons(data);
+        }
       }
-    } catch (err) {
-      console.error('Failed to load coupons:', err);
+    } catch {
+      // Fallback silently to initial coupons
     }
   };
 
@@ -430,13 +435,16 @@ export default function App() {
   // Synchronize with backend API on mount
   useEffect(() => {
     fetch('/api/products')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) return null;
+        return res.json();
+      })
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           setProducts(data);
         }
       })
-      .catch(err => console.error('Failed to load products from API:', err));
+      .catch(() => {});
 
     fetchAnnouncement();
     fetchCoupons();

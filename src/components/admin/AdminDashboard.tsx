@@ -141,12 +141,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsLoadingReturns(true);
     try {
       const res = await fetch('/api/return-requests');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setReturnRequests(data);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setReturnRequests(data);
+        }
       }
-    } catch (err) {
-      console.error('Failed to load return requests:', err);
+    } catch {
+      // Silent graceful fallback
     } finally {
       setIsLoadingReturns(false);
     }
@@ -156,12 +158,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsLoadingInquiries(true);
     try {
       const res = await fetch('/api/inquiries');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setInquiries(data);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setInquiries(data);
+        }
       }
-    } catch (err) {
-      console.error('Failed to load inquiries:', err);
+    } catch {
+      // Silent graceful fallback
     } finally {
       setIsLoadingInquiries(false);
     }
@@ -171,12 +175,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsLoadingCoupons(true);
     try {
       const res = await fetch('/api/coupons');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setCouponsList(data);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setCouponsList(data);
+        }
       }
-    } catch (err) {
-      console.error('Failed to load coupons:', err);
+    } catch {
+      // Silent graceful fallback
     } finally {
       setIsLoadingCoupons(false);
     }
